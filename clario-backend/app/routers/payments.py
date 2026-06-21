@@ -13,13 +13,13 @@ from app.db.subscriptions import get_subscription, upsert_subscription
 
 payments_router = APIRouter(prefix="/payments", tags=["Payments"])
 
-# Price map — populated from env vars with fallback to test price IDs.
-# Set STRIPE_PRICE_WEEKLY, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY in env.
-PRICE_IDS: dict[str, str] = {
-    "weekly": os.getenv("STRIPE_PRICE_WEEKLY", ""),
-    "monthly": os.getenv("STRIPE_PRICE_MONTHLY", ""),
-    "yearly": os.getenv("STRIPE_PRICE_YEARLY", ""),
-}
+def _price_ids() -> dict[str, str]:
+    """Read at call time so load_dotenv() has already populated os.environ."""
+    return {
+        "weekly": os.getenv("STRIPE_PRICE_WEEKLY", ""),
+        "monthly": os.getenv("STRIPE_PRICE_MONTHLY", ""),
+        "yearly": os.getenv("STRIPE_PRICE_YEARLY", ""),
+    }
 
 
 def _stripe_client() -> stripe.StripeClient:
@@ -54,15 +54,21 @@ def create_checkout_session(
     body: CheckoutRequest,
     user: dict = Depends(get_current_user),
 ):
-    if body.plan not in PRICE_IDS:
+    price_ids = _price_ids()
+    if body.plan not in price_ids:
         raise HTTPException(status_code=400, detail=f"Unknown plan: {body.plan}")
 
-    price_id = PRICE_IDS[body.plan]
+    price_id = price_ids[body.plan]
     if not price_id:
         raise HTTPException(
             status_code=500,
             detail=f"STRIPE_PRICE_{body.plan.upper()} env var not set",
         )
+
+    # Reject unauthenticated (guest) users — they have no real email for Stripe
+    user_email = user.get("email", "")
+    if user.get("id") == "guest" or not user_email or user_email == "guest@local":
+        raise HTTPException(status_code=401, detail="Sign in to start a subscription")
 
     client = _stripe_client()
     user_id = user["id"]
@@ -82,11 +88,11 @@ def create_checkout_session(
     if customer_id:
         session_params["customer"] = customer_id
     else:
-        session_params["customer_email"] = user.get("email")
+        session_params["customer_email"] = user_email
 
     try:
-        session = client.checkout.sessions.create(**session_params)
-    except stripe.StripeClientError as e:
+        session = client.v1.checkout.sessions.create(params=session_params)
+    except stripe.StripeError as e:
         logger.error("Stripe error creating checkout session: {}", e)
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -148,7 +154,7 @@ def _handle_checkout_completed(session: dict) -> None:
         if secret_key:
             try:
                 client = stripe.StripeClient(secret_key)
-                sub = client.subscriptions.retrieve(subscription_id)
+                sub = client.v1.subscriptions.retrieve(subscription_id)
                 status = sub.status
                 current_period_end = sub.current_period_end
                 # Derive plan from price metadata or interval

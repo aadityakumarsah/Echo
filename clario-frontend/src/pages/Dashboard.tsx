@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Flame, TrendingUp, TrendingDown, Minus, Sparkles, PhoneOff, FileText, Loader2, Zap, Clock, Activity } from "lucide-react";
+import { Mic, MicOff, Flame, TrendingUp, TrendingDown, Minus, Sparkles, PhoneOff, FileText, Loader2, Zap, Clock, Activity, Lock } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import Navbar from "@/components/Navbar";
 import { useVoiceJournal } from "@/hooks/useVoiceJournal";
@@ -16,6 +16,9 @@ import {
   type PastSessionCardModel,
 } from "@/lib/sessionReportView";
 import { SESSION_LANGUAGES, type SessionLanguage } from "@/lib/sessionLanguage";
+import { useAccess } from "@/hooks/useAccess";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -46,6 +49,12 @@ const Dashboard = () => {
     toggleMute,
     clearReport,
   } = useVoiceJournal();
+
+  const { hasAccess, trialDaysLeft, loading: accessLoading } = useAccess();
+  const { displayName } = useAuth();
+  const navigate = useNavigate();
+  const isPaidUser = !accessLoading && hasAccess && trialDaysLeft === 0;
+  const voiceLocked = !accessLoading && (!hasAccess || trialDaysLeft > 0);
 
   const [pastCards, setPastCards] = useState<PastSessionCardModel[]>([]);
   const [pastSessionsLoading, setPastSessionsLoading] = useState(true);
@@ -160,7 +169,7 @@ const Dashboard = () => {
             className="mb-10"
           >
             <motion.p variants={fadeUp} className="font-body text-sm text-muted-foreground">
-              {t("dashboard.greeting")} — {headerDateLabel}
+              {displayName ? `Hey, ${displayName}` : t("dashboard.greeting")} — {headerDateLabel}
             </motion.p>
             <motion.h1 variants={fadeUp} className="font-display text-3xl md:text-4xl font-light text-foreground mt-1">
               {t("dashboard.title_1")} <span className="italic">{t("dashboard.title_2")}</span>
@@ -180,20 +189,43 @@ const Dashboard = () => {
                 <p className="font-body text-xs uppercase tracking-[0.3em] text-muted-foreground mb-6">
                   Ready when you are
                 </p>
-                <button
-                  onClick={() => {
-                    const selectedPersonaObj = PERSONAS.find(p => p.id === selectedPersona) || PERSONAS[0];
-                    startSession(selectedPersona, selectedVoice, selectedPersonaObj.greeting, selectedLanguage);
-                  }}
-                  className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 my-2"
-                >
-                  <Mic className="w-8 h-8" />
-                </button>
-                <p className="font-body text-sm text-muted-foreground mt-3 mb-8">
-                  Tap to start your reflection
-                </p>
+                {voiceLocked ? (
+                  <div className="flex flex-col items-center gap-3 my-2">
+                    <div
+                      className="w-20 h-20 rounded-full flex items-center justify-center"
+                      style={{ background: "rgba(124,58,237,0.08)", border: "1.5px solid rgba(124,58,237,0.25)" }}
+                    >
+                      <Lock className="w-7 h-7" style={{ color: "#7C3AED", opacity: 0.7 }} />
+                    </div>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Voice agent is a premium feature
+                    </p>
+                    <button
+                      onClick={() => navigate("/paywall")}
+                      className="px-5 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      style={{ background: "#7C3AED", color: "#fff" }}
+                    >
+                      Upgrade to unlock
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        const selectedPersonaObj = PERSONAS.find(p => p.id === selectedPersona) || PERSONAS[0];
+                        startSession(selectedPersona, selectedVoice, selectedPersonaObj.greeting, selectedLanguage);
+                      }}
+                      className="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 my-2"
+                    >
+                      <Mic className="w-8 h-8" />
+                    </button>
+                    <p className="font-body text-sm text-muted-foreground mt-3 mb-8">
+                      Tap to start your reflection
+                    </p>
+                  </>
+                )}
 
-                <div className="flex flex-col gap-5 relative z-20 w-full max-w-sm px-4">
+                {!voiceLocked && <div className="flex flex-col gap-5 relative z-20 w-full max-w-sm px-4">
                   <div className="flex flex-col items-start gap-1.5 w-full">
                     <label className="text-[10px] uppercase font-body text-muted-foreground tracking-widest pl-1">Agent Persona</label>
                     <select 
@@ -231,7 +263,7 @@ const Dashboard = () => {
                       ))}
                     </select>
                   </div>
-                </div>
+                </div>}
               </div>
             </motion.div>
 

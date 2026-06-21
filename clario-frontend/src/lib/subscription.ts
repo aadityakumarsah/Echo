@@ -1,3 +1,6 @@
+// Sends the Supabase session JWT — no separate clario-token needed.
+import { supabase } from "./supabase";
+
 const BASE = (import.meta.env.VITE_BACKEND_BASE_URL as string) ?? "";
 
 export interface SubscriptionStatus {
@@ -8,9 +11,9 @@ export interface SubscriptionStatus {
 
 async function authHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = localStorage.getItem("clario-token");
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
   }
   return headers;
 }

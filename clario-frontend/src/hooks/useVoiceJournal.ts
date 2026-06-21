@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MediaHandler, GeminiClient } from "../lib/gemini";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { startVoiceSession, generateSessionReport, SessionDetailData } from "../lib/api";
 import {
   preferredLanguageGreetingPrefix,
@@ -8,6 +9,7 @@ import {
 } from "../lib/sessionLanguage";
 
 export function useVoiceJournal() {
+  const { displayName } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -90,7 +92,7 @@ export function useVoiceJournal() {
         voiceSessionIdRef.current = session_id;
 
         await mediaHandlerRef.current.initializeAudio();
-        geminiClientRef.current.connect(undefined, voice, persona, language);
+        geminiClientRef.current.connect(undefined, voice, persona, language, displayName ?? undefined);
 
         await mediaHandlerRef.current.startAudio((data) => {
           if (geminiClientRef.current?.isConnected()) {

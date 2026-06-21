@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import PremiumGate from "@/components/PremiumGate";
 
 declare const Hands: any;
 declare const Camera: any;
@@ -61,7 +62,7 @@ const isPalm = (lm: any[]) =>
   lm[20].y < lm[18].y;
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function ReliefBlocks() {
+function ReliefBlocksInner() {
   const navigate = useNavigate();
   const videoRef   = useRef<HTMLVideoElement>(null);
   const canvasRef  = useRef<HTMLCanvasElement>(null);
@@ -497,5 +498,17 @@ export default function ReliefBlocks() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ReliefBlocks() {
+  return (
+    <PremiumGate
+      feature="Space Blocks"
+      icon="🧊"
+      description="Build a 3D world with your bare hands using AR and MediaPipe. A premium experience for when words aren't enough."
+    >
+      <ReliefBlocksInner />
+    </PremiumGate>
   );
 }

@@ -116,16 +116,18 @@ async def websocket_endpoint(
     persona: Optional[str] = Query(default=None),
     voice: Optional[str] = Query(default=None),
     lang: Optional[str] = Query(default=None),
+    user_name: Optional[str] = Query(default=None),
 ):
     """Gemini Live bridge (optional JWT ?token=; ?persona= ?voice= ?lang=en|ne)."""
     user = get_current_user_from_token(token)
     await websocket.accept()
     logger.info(
-        "WebSocket connection accepted for user {} | persona={} | voice={} | lang={}",
+        "WebSocket connection accepted for user {} | persona={} | voice={} | lang={} | name={}",
         user.get("id"),
         persona,
         voice,
         lang,
+        user_name,
     )
 
     user_id = str(user.get("id") or "")
@@ -192,6 +194,7 @@ async def websocket_endpoint(
         persona=persona,
         voice_name=voice,
         language=lang,
+        user_name=user_name,
     )
 
     session_task: asyncio.Task | None = None

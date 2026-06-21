@@ -1,4 +1,10 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env into os.environ so os.getenv() calls anywhere in the app see the values
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import websocket_router, auth_router, settings_router, sessions_router, tts_router, relief_router, payments_router

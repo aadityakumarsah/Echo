@@ -105,16 +105,71 @@ GUEST_USER = {"id": "guest", "email": "guest@local", "created_at": "2024-01-01T0
 
 optional_bearer = HTTPBearer(auto_error=False)
 
+
+def _verify_supabase_token_via_secret(token: str) -> dict | None:
+    """Fast path: verify with SUPABASE_JWT_SECRET (no network call).
+    Skipped if the secret is missing or still set to the placeholder value.
+    """
+    secret = settings.SUPABASE_JWT_SECRET
+    if not secret or secret == "your-jwt-secret":
+        return None
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"], audience="authenticated")
+        user_id = payload.get("sub")
+        email   = payload.get("email", "")
+        if not user_id:
+            return None
+        return {"id": user_id, "email": email, "created_at": payload.get("iat", "")}
+    except jwt.PyJWTError:
+        return None
+
+
+def _verify_supabase_token_via_api(token: str) -> dict | None:
+    """Fallback: ask Supabase to validate the token using the admin client.
+    Requires SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. One network call per request.
+    """
+    try:
+        from app.core.supabase import get_supabase_client
+        client = get_supabase_client()
+        if client is None:
+            return None
+        resp = client.auth.get_user(token)
+        u = resp.user if hasattr(resp, "user") else None
+        if not u or not u.id:
+            return None
+        return {
+            "id": str(u.id),
+            "email": u.email or "",
+            "created_at": str(u.created_at) if u.created_at else "",
+        }
+    except Exception:
+        return None
+
+
+def _resolve_token(token: str) -> dict | None:
+    """Try Supabase JWT (secret → API fallback), then legacy custom JWT."""
+    # 1. Fast: local JWT verification
+    user = _verify_supabase_token_via_secret(token)
+    if user:
+        return user
+    # 2. Fallback: ask Supabase auth API (works even without JWT secret configured)
+    user = _verify_supabase_token_via_api(token)
+    if user:
+        return user
+    # 3. Legacy: custom Clario JWT
+    payload = decode_token(token)
+    if not payload:
+        return None
+    return get_user_by_id(payload["sub"])
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer),
 ) -> dict:
     """Returns the authenticated user, or the guest user if no token is provided."""
     if not credentials:
         return GUEST_USER
-    payload = decode_token(credentials.credentials)
-    if not payload:
-        return GUEST_USER
-    user = get_user_by_id(payload["sub"])
+    user = _resolve_token(credentials.credentials)
     return user if user else GUEST_USER
 
 
@@ -122,8 +177,5 @@ def get_current_user_from_token(token: str | None) -> dict:
     """Verify a raw JWT string — falls back to guest user if missing/invalid."""
     if not token:
         return GUEST_USER
-    payload = decode_token(token)
-    if not payload:
-        return GUEST_USER
-    user = get_user_by_id(payload["sub"])
+    user = _resolve_token(token)
     return user if user else GUEST_USER

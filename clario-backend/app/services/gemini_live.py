@@ -92,10 +92,15 @@ If the user explicitly switches to another language mid-session, follow their le
 """
 
 
-def _build_full_system_prompt(persona: str | None, lang: str | None) -> str:
+def _build_full_system_prompt(persona: str | None, lang: str | None, user_name: str | None = None) -> str:
     resolved_lang = _resolve_language(lang)
     base = _resolve_system_prompt(persona)
-    return base + _language_preference_block(resolved_lang)
+    name_block = f"""
+<user_context>
+    The user's name is {user_name.strip()}. Use their name naturally in conversation — greet them by name at the start, and occasionally use it throughout to make the session feel personal. Don't overdo it.
+</user_context>
+""" if user_name and user_name.strip() else ""
+    return base + name_block + _language_preference_block(resolved_lang)
 
 
 class GeminiLive:
@@ -112,6 +117,7 @@ class GeminiLive:
         persona: str | None = None,
         voice_name: str | None = None,
         language: str | None = None,
+        user_name: str | None = None,
     ):
         """
         Initializes the GeminiLive client.
@@ -133,9 +139,10 @@ class GeminiLive:
         self.tools = tools or []
         self.tool_mapping = tool_mapping or {}
         self.persona = persona
+        self.user_name = user_name
         self.voice_name = _resolve_voice_name(voice_name)
         self.language = _resolve_language(language)
-        self._system_instruction_text = _build_full_system_prompt(persona, language)
+        self._system_instruction_text = _build_full_system_prompt(persona, language, user_name)
 
     async def start_session(self, audio_input_queue, video_input_queue, text_input_queue, audio_output_callback, audio_interrupt_callback=None):
         logger.info(

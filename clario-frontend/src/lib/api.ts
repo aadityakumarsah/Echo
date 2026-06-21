@@ -1,7 +1,14 @@
+import { supabase } from "./supabase";
+
 const BASE = (import.meta.env.VITE_BACKEND_BASE_URL as string) ?? "";
 
-function headers(): Record<string, string> {
-  return { "Content-Type": "application/json" };
+async function headers(): Promise<Record<string, string>> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    h["Authorization"] = `Bearer ${session.access_token}`;
+  }
+  return h;
 }
 
 async function safeJson(res: Response): Promise<any> {
@@ -36,7 +43,7 @@ export interface SettingsUpdate {
 }
 
 export async function getSettings(): Promise<SettingsData> {
-  const res = await fetch(`${BASE}/settings`, { headers: headers() });
+  const res = await fetch(`${BASE}/settings`, { headers: await headers() });
   const json = await safeJson(res);
   if (!json.success) throw new Error(json.message ?? "Failed to load settings");
   return json.data as SettingsData;
@@ -45,7 +52,7 @@ export async function getSettings(): Promise<SettingsData> {
 export async function patchSettings(updates: SettingsUpdate): Promise<SettingsData> {
   const res = await fetch(`${BASE}/settings`, {
     method: "PATCH",
-    headers: headers(),
+    headers: await headers(),
     body: JSON.stringify(updates),
   });
   const json = await safeJson(res);
@@ -68,7 +75,7 @@ export async function startVoiceSession(): Promise<VoiceSessionStart> {
   if (!BASE) throw new Error("Backend URL not configured (VITE_BACKEND_BASE_URL missing)");
   const res = await fetch(`${BASE}/sessions/start`, {
     method: "POST",
-    headers: headers(),
+    headers: await headers(),
   }).catch((err) => { throw new Error(`Cannot reach backend: ${err.message}`); });
   const json = await safeJson(res);
   if (!json.success || !json.data?.session_id) {
@@ -168,7 +175,7 @@ export async function listSessions(params?: {
       search.set("tz_offset_minutes", String(params.tzOffsetMinutes));
     }
     const qs = search.toString();
-    const res = await fetch(`${BASE}/sessions${qs ? `?${qs}` : ""}`, { headers: headers() });
+    const res = await fetch(`${BASE}/sessions${qs ? `?${qs}` : ""}`, { headers: await headers() });
     const json = await safeJson(res);
     if (!json.success) throw new Error(json.message ?? "Failed to load sessions");
     return json.data as SessionDetailData[];
@@ -180,7 +187,7 @@ export async function listSessions(params?: {
 
 export async function getSession(sessionId: string): Promise<SessionDetailData> {
   const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}`, {
-    headers: headers(),
+    headers: await headers(),
   });
   const json = await safeJson(res);
   if (!json.success) throw new Error(json.message ?? "Failed to load session");
@@ -192,7 +199,7 @@ export async function generateSessionReport(sessionId: string): Promise<SessionD
   if (sessionId.startsWith("local-")) throw new Error("Cannot generate report for a local session");
   const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}/report`, {
     method: "POST",
-    headers: headers(),
+    headers: await headers(),
   }).catch((err) => { throw new Error(`Network error — is the backend running? (${err.message})`); });
   if (!res.ok && res.status === 0) throw new Error("CORS blocked — add your Vercel URL to ALLOWED_ORIGINS on Render");
   const json = await safeJson(res);

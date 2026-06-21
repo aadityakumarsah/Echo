@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     # REDIS_DB: int = 0
     # REDIS_PASSWORD: Optional[str] = None
     
+    # Supabase — Project URL and service role key from Supabase > Settings > API
+    # JWT secret from Supabase > Settings > API > JWT Settings > JWT Secret
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
+
     # Gemini settings
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3.1-flash-live-preview"

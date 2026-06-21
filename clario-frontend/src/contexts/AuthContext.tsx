@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
+  displayName: string | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -12,6 +13,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   user: null,
+  displayName: null,
   loading: true,
   signOut: async () => {},
 });
@@ -39,9 +41,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const user = session?.user ?? null;
+  const displayName = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? null;
+
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, signOut }}
+      value={{ session, user, displayName, loading, signOut }}
     >
       {children}
     </AuthContext.Provider>

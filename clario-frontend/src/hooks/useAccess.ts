@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { isTrialActive, getTrialDaysLeft } from "@/lib/trial";
 import { getSubscriptionStatus } from "@/lib/subscription";
 
@@ -9,35 +10,27 @@ interface AccessState {
 }
 
 export function useAccess(): AccessState {
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [subscriptionActive, setSubscriptionActive] = useState(false);
+  const [subLoading, setSubLoading] = useState(true);
 
-  const trialActive = isTrialActive();
-  const trialDaysLeft = getTrialDaysLeft();
+  const createdAt = user?.created_at ?? null;
+  const trialActive  = isTrialActive(createdAt);
+  const trialDaysLeft = getTrialDaysLeft(createdAt);
 
   useEffect(() => {
-    // Only check subscription if user has a token (is logged in)
-    const token = localStorage.getItem("clario-token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (authLoading) return;
+    if (!user) { setSubLoading(false); return; }
 
     getSubscriptionStatus()
-      .then((status) => {
-        setSubscriptionActive(status.active);
-      })
-      .catch(() => {
-        setSubscriptionActive(false);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+      .then((s) => setSubscriptionActive(s.active))
+      .catch(() => setSubscriptionActive(false))
+      .finally(() => setSubLoading(false));
+  }, [user, authLoading]);
 
   return {
     hasAccess: trialActive || subscriptionActive,
     trialDaysLeft,
-    loading,
+    loading: authLoading || subLoading,
   };
 }

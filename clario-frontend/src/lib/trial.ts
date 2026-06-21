@@ -1,26 +1,17 @@
-const TRIAL_KEY = "clario-trial-start";
+// Trial is based on Supabase user.created_at — server-side, cannot be faked
+// by clearing localStorage.
+
 const TRIAL_DAYS = 3;
 
-export function getTrialStartDate(): Date {
-  const stored = localStorage.getItem(TRIAL_KEY);
-  if (stored) {
-    return new Date(stored);
-  }
-  const now = new Date();
-  localStorage.setItem(TRIAL_KEY, now.toISOString());
-  return now;
+export function isTrialActive(userCreatedAt: string | null | undefined): boolean {
+  if (!userCreatedAt) return false;
+  const expiry = new Date(new Date(userCreatedAt).getTime() + TRIAL_DAYS * 864e5);
+  return Date.now() < expiry.getTime();
 }
 
-export function isTrialActive(): boolean {
-  const start = getTrialStartDate();
-  const expiry = new Date(start.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-  return new Date() < expiry;
-}
-
-export function getTrialDaysLeft(): number {
-  const start = getTrialStartDate();
-  const expiry = new Date(start.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-  const msLeft = expiry.getTime() - Date.now();
-  if (msLeft <= 0) return 0;
-  return Math.min(TRIAL_DAYS, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+export function getTrialDaysLeft(userCreatedAt: string | null | undefined): number {
+  if (!userCreatedAt) return 0;
+  const expiry = new Date(new Date(userCreatedAt).getTime() + TRIAL_DAYS * 864e5);
+  const ms = expiry.getTime() - Date.now();
+  return ms <= 0 ? 0 : Math.min(TRIAL_DAYS, Math.ceil(ms / 864e5));
 }

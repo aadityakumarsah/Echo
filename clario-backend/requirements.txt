@@ -23,5 +23,5 @@ loguru>=0.7.3
 # Payments
 stripe>=7.0.0
 
-# Database (via Supabase SDK)
-# Note: Supabase dependencies are handled through google-genai/langchain
+# Database — Supabase (optional: falls back to SQLite if env vars not set)
+supabase>=2.0.0

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { useAccess } from "@/hooks/useAccess";
 import Index from "./pages/Index.tsx";
 import About from "./pages/About.tsx";
@@ -28,7 +29,6 @@ import TrialBanner from "./components/TrialBanner.tsx";
 
 const queryClient = new QueryClient();
 
-// Routes that are always accessible — don't redirect these to paywall
 const UNGUARDED_PATHS = ["/paywall", "/paywall/success"];
 
 function AppRoutes() {
@@ -37,10 +37,17 @@ function AppRoutes() {
 
   const isUnguarded = UNGUARDED_PATHS.some((p) => location.pathname.startsWith(p));
 
-  // While loading, render nothing (avoids flash of paywall)
-  if (loading && !isUnguarded) return null;
+  if (loading && !isUnguarded) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#060F1E" }}
+      >
+        <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-  // If access check is done, user is on a guarded route, and has no access → redirect
   if (!loading && !hasAccess && !isUnguarded) {
     return <Navigate to="/paywall" replace />;
   }
@@ -84,7 +91,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppRoutes />
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

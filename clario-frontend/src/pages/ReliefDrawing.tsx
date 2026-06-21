@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trash2, Undo2, Download, Send } from "lucide-react";
 import DrawingReport from "../components/DrawingReport";
+import PremiumGate from "@/components/PremiumGate";
 
 declare const Hands: any;
 declare const Camera: any;
@@ -33,7 +34,7 @@ function isPinching(lm: any[], threshold = 0.07): boolean {
   return Math.hypot(dx, dy) < threshold;
 }
 
-export default function ReliefDrawing() {
+function ReliefDrawingInner() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const drawCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -387,5 +388,17 @@ export default function ReliefDrawing() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReliefDrawing() {
+  return (
+    <PremiumGate
+      feature="AI Draw"
+      icon="✏️"
+      description="Draw with your hands in the air and let Gemini read your emotions from every stroke. Pure magic — and pure premium."
+    >
+      <ReliefDrawingInner />
+    </PremiumGate>
   );
 }
