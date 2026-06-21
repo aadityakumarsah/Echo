@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sun, Moon, Languages, CheckSquare, LayoutDashboard, Wind, Brain, BookOpen, Settings } from "lucide-react";
+import { Sun, Moon, Languages, CheckSquare, LayoutDashboard, Wind, Brain, BookOpen, Settings, Smile } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import i18n from "@/i18n";
@@ -10,13 +10,14 @@ const NAV_ITEMS = [
   { label: "Check",      path: "/daily-check", Icon: CheckSquare },
   { label: "Dashboard",  path: "/dashboard",   Icon: LayoutDashboard },
   { label: "Breathe",    path: "/breathe",     Icon: Wind },
+  { label: "Relief",     path: "/relief",      Icon: Smile },
   { label: "Meditation", path: "/meditation",  Icon: Brain },
   { label: "Journal",    path: "/journal",     Icon: BookOpen },
   { label: "Settings",   path: "/settings",    Icon: Settings },
 ];
 
 // Pages that render their own full-screen UI — hide navbar entirely on mobile
-const FULLSCREEN_PATHS = ["/breathe/", "/daily-check/morning", "/daily-check/refill", "/daily-check/night", "/meditation"];
+const FULLSCREEN_PATHS = ["/breathe/", "/daily-check/morning", "/daily-check/refill", "/daily-check/night", "/meditation", "/relief/drawing", "/relief/blocks"];
 
 const Navbar = () => {
   const location = useLocation();

@@ -18,6 +18,9 @@ import DailyCheck from "./pages/DailyCheck.tsx";
 import DailyCheckMorning from "./pages/DailyCheckMorning.tsx";
 import DailyCheckRefill from "./pages/DailyCheckRefill.tsx";
 import DailyCheckNight from "./pages/DailyCheckNight.tsx";
+import Relief from "./pages/Relief.tsx";
+import ReliefDrawing from "./pages/ReliefDrawing.tsx";
+import ReliefBlocks from "./pages/ReliefBlocks.tsx";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +45,9 @@ const App = () => (
             <Route path="/daily-check/morning" element={<DailyCheckMorning />} />
             <Route path="/daily-check/refill" element={<DailyCheckRefill />} />
             <Route path="/daily-check/night" element={<DailyCheckNight />} />
+            <Route path="/relief" element={<Relief />} />
+            <Route path="/relief/drawing" element={<ReliefDrawing />} />
+            <Route path="/relief/blocks" element={<ReliefBlocks />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
