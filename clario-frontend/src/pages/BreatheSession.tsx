@@ -179,6 +179,9 @@ export default function BreatheSession() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [soundOn, setSoundOn] = useState(true);
 
+  // ── Breath cue audio (inhale / exhale) ─────────────────────────────────────
+  const breathCueRef = useRef<HTMLAudioElement | null>(null);
+
   // ── Voice guide (Gemini TTS) ────────────────────────────────────────────────
   const [voiceOn, setVoiceOn] = useState(false);
   const [voiceLoading, setVoiceLoading] = useState(false);
@@ -306,6 +309,24 @@ export default function BreatheSession() {
   useEffect(() => {
     if (!running) return;
     phaseSpring.set(PHASE_TARGET[currentPhase.name]);
+  }, [phaseIdx, running]);
+
+  // ── Play inhale / exhale cue audio on phase change ─────────────────────────
+  useEffect(() => {
+    if (!running) return;
+    const name = currentPhase.name;
+    if (name !== "inhale" && name !== "exhale") return;
+    const src = name === "inhale" ? "/breadth/deepbreadth.m4a" : "/breadth/exhale.m4a";
+
+    if (!breathCueRef.current) {
+      breathCueRef.current = new Audio();
+    }
+    const cue = breathCueRef.current;
+    cue.pause();
+    cue.src = src;
+    cue.currentTime = 0;
+    cue.volume = 0.85;
+    cue.play().catch(() => {});
   }, [phaseIdx, running]);
 
   useEffect(() => {
