@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
-import { X, UserRound, Music2, Vibrate } from "lucide-react";
+import { X, UserRound, Music2, VolumeX, Vibrate } from "lucide-react";
 
 type Phase = "inhale" | "hold" | "exhale" | "rest";
 
@@ -174,6 +174,103 @@ export default function BreatheSession() {
   const elapsedRef = useRef(0);
   const phaseIdxRef = useRef(0);
   const currentPhase = pattern.phases[phaseIdx];
+
+  // ── Ambient audio ──────────────────────────────────────────────────────────
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
+
+  // ── Voice guide (Gemini TTS) ────────────────────────────────────────────────
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const voiceCacheRef = useRef<Record<string, string>>({});  // phrase → object URL
+  const guideAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const GUIDE_PHRASES: Record<Phase, string> = {
+    inhale: "Take a deep breath in",
+    hold:   "Hold your breath",
+    exhale: "Breathe out slowly",
+    rest:   "Rest and relax",
+  };
+
+  const fetchVoiceGuide = async () => {
+    const BASE = (import.meta.env.VITE_BACKEND_BASE_URL as string) ?? "http://localhost:8000";
+    const phrases = [...new Set(pattern.phases.map((p) => GUIDE_PHRASES[p.name]))];
+    await Promise.all(
+      phrases.map(async (text) => {
+        if (voiceCacheRef.current[text]) return;
+        try {
+          const res = await fetch(`${BASE}/tts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, voice: "Zephyr" }),
+          });
+          if (!res.ok) return;
+          const blob = await res.blob();
+          voiceCacheRef.current[text] = URL.createObjectURL(blob);
+        } catch { /* silent fail */ }
+      })
+    );
+  };
+
+  const toggleVoice = async () => {
+    if (!voiceOn && Object.keys(voiceCacheRef.current).length === 0) {
+      setVoiceLoading(true);
+      await fetchVoiceGuide();
+      setVoiceLoading(false);
+    }
+    setVoiceOn((prev) => !prev);
+  };
+
+  // Play guide clip on each phase change
+  useEffect(() => {
+    if (!voiceOn || !running) return;
+    const text = GUIDE_PHRASES[currentPhase.name];
+    const url = voiceCacheRef.current[text];
+    if (!url) return;
+    guideAudioRef.current?.pause();
+    const a = new Audio(url);
+    a.volume = 0.9;
+    guideAudioRef.current = a;
+    a.play().catch(() => {});
+  }, [phaseIdx, running, voiceOn]);
+
+  // Revoke cached object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(voiceCacheRef.current).forEach(URL.revokeObjectURL);
+      guideAudioRef.current?.pause();
+    };
+  }, []);
+
+  // Create audio element once
+  useEffect(() => {
+    const audio = new Audio("/breadth/breadth.m4a");
+    audio.loop = true;
+    audio.volume = 0.45;
+    audioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.src = "";
+    };
+  }, []);
+
+  // Play/pause based on running state and soundOn
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (running && soundOn) {
+      audio.play().catch(() => {}); // ignore autoplay policy errors
+    } else {
+      audio.pause();
+    }
+  }, [running, soundOn]);
+
+  // Stop audio when done
+  useEffect(() => {
+    if (done) audioRef.current?.pause();
+  }, [done]);
+
+  const toggleSound = () => setSoundOn((prev) => !prev);
 
   // Single phase spring drives both wave shape and circle position (~2s transition)
   const phaseSpring = useSpring(0, { stiffness: 12, damping: 11 });
@@ -413,21 +510,51 @@ export default function BreatheSession() {
 
         {/* Bottom icon bar */}
         <div className="flex items-center gap-4 pb-8">
-          {[
-            { Icon: UserRound, label: "guide" },
-            { Icon: Music2,    label: "sound" },
-            { Icon: Vibrate,   label: "haptic" },
-          ].map(({ Icon, label }) => (
-            <button
-              key={label}
-              type="button"
-              aria-label={label}
-              className="w-14 h-14 rounded-2xl flex items-center justify-center transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.07)" }}
-            >
-              <Icon className="w-5 h-5" style={{ color: pattern.color }} />
-            </button>
-          ))}
+          {/* Voice guide toggle */}
+          <button
+            type="button"
+            aria-label={voiceOn ? "disable voice guide" : "enable voice guide"}
+            onClick={toggleVoice}
+            disabled={voiceLoading}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all hover:opacity-80"
+            style={{
+              backgroundColor: voiceOn ? pattern.color + "22" : "rgba(255,255,255,0.06)",
+              border: `1px solid ${voiceOn ? pattern.color + "55" : "rgba(255,255,255,0.07)"}`,
+              opacity: voiceLoading ? 0.6 : 1,
+            }}
+          >
+            {voiceLoading
+              ? <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: pattern.color, borderTopColor: "transparent" }} />
+              : <UserRound className="w-5 h-5" style={{ color: voiceOn ? pattern.color : "rgba(255,255,255,0.35)" }} />
+            }
+          </button>
+
+          {/* Sound toggle */}
+          <button
+            type="button"
+            aria-label={soundOn ? "mute sound" : "unmute sound"}
+            onClick={toggleSound}
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all hover:opacity-80"
+            style={{
+              backgroundColor: soundOn ? pattern.color + "22" : "rgba(255,255,255,0.06)",
+              border: `1px solid ${soundOn ? pattern.color + "55" : "rgba(255,255,255,0.07)"}`,
+            }}
+          >
+            {soundOn
+              ? <Music2  className="w-5 h-5" style={{ color: pattern.color }} />
+              : <VolumeX className="w-5 h-5" style={{ color: "rgba(255,255,255,0.3)" }} />
+            }
+          </button>
+
+          {/* Haptic (decorative) */}
+          <button
+            type="button"
+            aria-label="haptic"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-opacity hover:opacity-70"
+            style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <Vibrate className="w-5 h-5" style={{ color: pattern.color }} />
+          </button>
         </div>
       </div>
     </div>

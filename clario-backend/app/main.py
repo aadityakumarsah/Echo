@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import websocket_router, auth_router, settings_router, sessions_router
+from app.routers import websocket_router, auth_router, settings_router, sessions_router, tts_router
 from app.core.database import init_db
 
 app = FastAPI()
@@ -28,6 +28,7 @@ app.include_router(auth_router)
 app.include_router(settings_router)
 app.include_router(sessions_router)
 app.include_router(websocket_router)
+app.include_router(tts_router)
 
 @app.get("/", tags=['Root'])
 def read_root():

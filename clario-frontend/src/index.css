@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile: push page content above the bottom tab bar (≈64px + safe area) */
+@media (max-width: 767px) {
+  .page-content {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Top offset for the mobile brand strip (~52px) */
+  .page-top {
+    padding-top: 52px;
+  }
+}
+
 @layer base {
   :root {
     --background: 38 33% 96%;
