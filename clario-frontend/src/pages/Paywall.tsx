@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { createCheckoutSession } from "@/lib/subscription";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAccess } from "@/hooks/useAccess";
 
 type Plan = "weekly" | "monthly" | "yearly";
 type AuthMode = "signin" | "signup";
@@ -190,7 +192,13 @@ function PlanCards() {
       const url = await createCheckoutSession(plan);
       window.location.href = url;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const isFetch = msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network");
+      setError(
+        isFetch
+          ? "Could not reach the server. The backend may be waking up — wait a few seconds and try again."
+          : msg
+      );
       setLoadingPlan(null);
     }
   };
@@ -257,7 +265,16 @@ function PlanCards() {
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 text-center max-w-sm">{error}</p>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-red-400 text-center max-w-sm">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="text-xs underline"
+            style={{ color: "#64748B" }}
+          >
+            Dismiss and try again
+          </button>
+        </div>
       )}
       <p className="text-xs text-center" style={{ color: "#475569" }}>
         Cancel anytime. Secure payment via Stripe.
@@ -268,10 +285,15 @@ function PlanCards() {
 
 export default function Paywall() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const { trialDaysLeft, loading: accessLoading } = useAccess();
+  const navigate = useNavigate();
 
-  // User is logged in but trial expired → show plans
+  const loading = authLoading || accessLoading;
+  // User is logged in → show plans
   // User is not logged in → show auth form
-  const showPlans = !authLoading && !!user;
+  const showPlans = !loading && !!user;
+  // Still in trial → show "not yet" escape
+  const stillInTrial = !loading && !!user && trialDaysLeft > 0;
 
   return (
     <div
@@ -298,28 +320,49 @@ export default function Paywall() {
         className="text-center space-y-2"
       >
         <h2 className="text-3xl font-semibold text-white">
-          {showPlans ? "Your free trial has ended" : "Feel better, starting today"}
+          {showPlans
+            ? stillInTrial
+              ? "Upgrade your plan"
+              : "Your free trial has ended"
+            : "Feel better, starting today"}
         </h2>
         <p className="text-base" style={{ color: "#94A3B8" }}>
           {showPlans
-            ? "Continue your wellness journey with a Clario subscription"
+            ? stillInTrial
+              ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left in your trial — upgrade anytime`
+              : "Continue your wellness journey with a Clario subscription"
             : "Create a free account and get 3 days on us"}
         </p>
       </motion.div>
 
       <AnimatePresence mode="wait">
-        {authLoading ? (
+        {loading ? (
           <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
         ) : showPlans ? (
           <>
             <PlanCards />
-            <button
-              onClick={signOut}
-              className="text-xs mt-2 underline"
-              style={{ color: "#475569" }}
-            >
-              Sign out
-            </button>
+            <div className="flex flex-col items-center gap-3 mt-1">
+              {stillInTrial && (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-6 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#94A3B8",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  Not yet, continue my trial
+                </button>
+              )}
+              <button
+                onClick={signOut}
+                className="text-xs underline"
+                style={{ color: "#475569" }}
+              >
+                Sign out
+              </button>
+            </div>
           </>
         ) : (
           <AuthForm />
