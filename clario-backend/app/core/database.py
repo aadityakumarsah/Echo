@@ -1,9 +1,10 @@
 """SQLite database — single file, no external services required."""
+import os
 import sqlite3
 import threading
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent.parent / "clario.db"
+DB_PATH = Path(os.getenv("DB_PATH", "/tmp/clario.db"))
 
 _local = threading.local()
 
