@@ -1,7 +1,7 @@
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
 
 create table if not exists subscriptions (
-  user_id             text primary key,
+  user_id             uuid primary key references auth.users(id) on delete cascade,
   stripe_customer_id  text,
   stripe_subscription_id text,
   plan                text,         -- 'weekly' | 'monthly' | 'yearly'
@@ -14,6 +14,6 @@ alter table subscriptions enable row level security;
 
 create policy "Users can read own subscription"
   on subscriptions for select
-  using (auth.uid()::text = user_id);
+  using (auth.uid() = user_id);
 
 -- Service role (backend) bypasses RLS automatically — no extra policy needed.
