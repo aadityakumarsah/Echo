@@ -24,6 +24,5 @@ loguru>=0.7.3
 stripe>=7.0.0
 
 # Database — Supabase (optional: falls back to SQLite if env vars not set)
-# 2.10+ uses gotrue>=2.x which allows httpx>=0.28.x (required by google-genai)
-supabase>=2.10.0
-httpx>=0.28.1,<1.0.0
+# 2.15+ supports httpx>=0.28 (required by google-genai 1.69+)
+supabase>=2.15.0
