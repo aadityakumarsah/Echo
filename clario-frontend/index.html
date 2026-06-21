@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clario — Voice-First AI Journaling</title>
+    <meta name="description" content="Speak your thoughts. Clario listens and reveals emotional patterns — building awareness one day at a time." />
+    <meta name="author" content="Clario" />
+
+    <meta property="og:title" content="Clario — Voice-First AI Journaling" />
+    <meta property="og:description" content="Speak your thoughts. Clario listens and reveals emotional patterns — building awareness one day at a time." />
+    <meta property="og:type" content="website" />
+    <!-- MediaPipe for pose detection (Day Refill squat tracker) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

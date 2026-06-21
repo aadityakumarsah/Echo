@@ -1,0 +1,435 @@
+/**
+ * Breathing session — circle rides a sine wave (up=inhale, down=exhale).
+ * Design: deep navy, palm silhouettes, stars, phase label at bottom.
+ */
+
+import { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useSpring, useTransform } from "framer-motion";
+import { X, UserRound, Music2, Vibrate } from "lucide-react";
+
+type Phase = "inhale" | "hold" | "exhale" | "rest";
+
+type BreathPattern = {
+  label: string;
+  tagline: string;
+  color: string;
+  phases: { name: Phase; duration: number; text: string }[];
+  totalMinutes: number;
+};
+
+const PATTERNS: Record<string, BreathPattern> = {
+  anxiety: {
+    label: "Anxiety",
+    tagline: "Relax and breathe deeply",
+    color: "#7C6FAC",
+    totalMinutes: 2,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 7, text: "Hold" },
+      { name: "exhale", duration: 8, text: "Exhale" },
+    ],
+  },
+  anger: {
+    label: "Anger",
+    tagline: "Cool the fire within",
+    color: "#A0688A",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 4, text: "Hold" },
+      { name: "exhale", duration: 6, text: "Exhale" },
+      { name: "rest",   duration: 2, text: "Rest" },
+    ],
+  },
+  irritation: {
+    label: "Irritation",
+    tagline: "Soften the edge",
+    color: "#5C8A7A",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 4, text: "Hold" },
+      { name: "exhale", duration: 6, text: "Exhale" },
+    ],
+  },
+  sadness: {
+    label: "Sadness",
+    tagline: "Let it move through",
+    color: "#5A7FA8",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 5, text: "Inhale" },
+      { name: "hold",   duration: 2, text: "Hold" },
+      { name: "exhale", duration: 7, text: "Exhale slowly" },
+    ],
+  },
+  fear: {
+    label: "Fear",
+    tagline: "Ground yourself now",
+    color: "#6A8A6A",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 4, text: "Hold" },
+      { name: "exhale", duration: 4, text: "Exhale" },
+      { name: "rest",   duration: 4, text: "Rest" },
+    ],
+  },
+  worry: {
+    label: "Worry",
+    tagline: "Release what you can't control",
+    color: "#8A7A5A",
+    totalMinutes: 4,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 6, text: "Hold" },
+      { name: "exhale", duration: 8, text: "Exhale" },
+    ],
+  },
+  envy: {
+    label: "Envy",
+    tagline: "Return to yourself",
+    color: "#5A6A8A",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 5, text: "Inhale" },
+      { name: "hold",   duration: 3, text: "Hold" },
+      { name: "exhale", duration: 6, text: "Exhale" },
+    ],
+  },
+  stress: {
+    label: "Stress",
+    tagline: "Let the tension go",
+    color: "#7C6FAC",
+    totalMinutes: 3,
+    phases: [
+      { name: "inhale", duration: 4, text: "Inhale" },
+      { name: "hold",   duration: 4, text: "Hold" },
+      { name: "exhale", duration: 6, text: "Exhale" },
+    ],
+  },
+};
+
+// ─── wave geometry ─────────────────────────────────────────────────────────────
+// SVG uses a 0–100 coordinate space; preserveAspectRatio="none" stretches it
+// to fill its container exactly, so the wave always goes edge-to-edge.
+// The circle is rendered as a separate HTML element at left:50% / top:<circleTopPct>%.
+
+const AMP_Y = 28; // wave amplitude in SVG percentage units (0-100)
+const MIDX = 50;  // circle always at 50% width
+
+// Phase spring targets (single value drives both wave shape & circle position)
+// sin(2π * x/100 + phase) at x=50 → sin(π + phase) → the circle Y:
+//   circleY% = 50 – AMP_Y * sin(phase)
+// Phase values:
+//   inhale  = +π/2  → circleY = 50 – AMP_Y  (near top  = crest)
+//   hold    =  0    → circleY = 50           (center    = S-curve zero-crossing)
+//   exhale  = –π/2  → circleY = 50 + AMP_Y  (near bot  = trough)
+const PHASE_TARGET: Record<Phase, number> = {
+  inhale: Math.PI / 2,
+  hold:   0,
+  exhale: -Math.PI / 2,
+  rest:   0,
+};
+
+function buildWavePath(phase: number): string {
+  const N = 100;
+  const parts: string[] = [];
+  for (let i = 0; i <= N; i++) {
+    const x = i; // 0–100
+    const y = 50 + AMP_Y * Math.sin((2 * Math.PI * x) / 100 + phase);
+    parts.push(i === 0 ? `M${x},${y.toFixed(2)}` : `L${x},${y.toFixed(2)}`);
+  }
+  return parts.join(" ");
+}
+
+function circleTopFromPhase(phase: number): number {
+  // sin(π + phase) = –sin(phase)
+  return 50 - AMP_Y * Math.sin(phase);
+}
+
+// ─── deterministic stars ───────────────────────────────────────────────────────
+const STARS = Array.from({ length: 38 }, (_, i) => ({
+  x: ((i * 173 + 53) % 100),
+  y: ((i * 97 + 11) % 75),
+  r: 0.6 + (i % 4) * 0.45,
+  op: 0.18 + (i % 5) * 0.12,
+}));
+
+// ─── component ────────────────────────────────────────────────────────────────
+export default function BreatheSession() {
+  const { emotion = "anxiety" } = useParams<{ emotion: string }>();
+  const navigate = useNavigate();
+  const pattern = PATTERNS[emotion] ?? PATTERNS.anxiety;
+
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [countdown, setCountdown] = useState(pattern.phases[0].duration);
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  const totalSeconds = pattern.totalMinutes * 60;
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const phaseIdxRef = useRef(0);
+  const currentPhase = pattern.phases[phaseIdx];
+
+  // Single phase spring drives both wave shape and circle position (~2s transition)
+  const phaseSpring = useSpring(0, { stiffness: 12, damping: 11 });
+  const wavePath = useTransform(phaseSpring, buildWavePath);
+  // Circle top % derived from phase: 50 – AMP_Y * sin(phase)
+  const circleTopPct = useTransform(phaseSpring, circleTopFromPhase);
+  const circleTopStr = useTransform(circleTopPct, (v) => `${v}%`);
+
+  useEffect(() => {
+    if (!running) return;
+    phaseSpring.set(PHASE_TARGET[currentPhase.name]);
+  }, [phaseIdx, running]);
+
+  useEffect(() => {
+    if (!running) return;
+    timerRef.current = setInterval(() => {
+      elapsedRef.current += 1;
+      setElapsed(elapsedRef.current);
+
+      if (elapsedRef.current >= totalSeconds) {
+        clearInterval(timerRef.current!);
+        setRunning(false);
+        setDone(true);
+        phaseSpring.set(0);
+        return;
+      }
+
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          const next = (phaseIdxRef.current + 1) % pattern.phases.length;
+          phaseIdxRef.current = next;
+          setPhaseIdx(next);
+          return pattern.phases[next].duration;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerRef.current!);
+  }, [running]);
+
+  const start = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    phaseIdxRef.current = 0;
+    elapsedRef.current = 0;
+    setPhaseIdx(0);
+    setCountdown(pattern.phases[0].duration);
+    setElapsed(0);
+    setDone(false);
+    phaseSpring.set(PHASE_TARGET[pattern.phases[0].name]);
+    setRunning(true);
+  };
+
+  const timeLeft = totalSeconds - elapsed;
+  const timeLeftStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
+
+  return (
+    <div
+      className="min-h-screen w-full flex flex-col relative overflow-hidden select-none"
+      style={{ backgroundColor: "#0B1628" }}
+    >
+      {/* ── Stars ──────────────────────────────────────────────────────────── */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+        {STARS.map((s, i) => (
+          <circle
+            key={i}
+            cx={`${s.x}%`} cy={`${s.y}%`}
+            r={s.r} fill="white" opacity={s.op}
+          />
+        ))}
+      </svg>
+
+      {/* ── Palm silhouettes ───────────────────────────────────────────────── */}
+      <svg
+        className="absolute top-0 left-0 w-full pointer-events-none"
+        style={{ height: "62%", zIndex: 1 }}
+        viewBox="0 0 375 480"
+        preserveAspectRatio="xMidYMin slice"
+      >
+        {/* LEFT palm cluster */}
+        <g fill="#07101f">
+          {/* main frond — upper right */}
+          <path d="M -25,-15 C 20,5 80,-30 220,10 C 190,55 80,50 10,35 Z" opacity="0.95" />
+          {/* second frond — spreading right */}
+          <path d="M -25,-15 C 10,30 100,20 280,55 C 240,100 110,95 30,70 Z" opacity="0.88" />
+          {/* third frond — drooping down */}
+          <path d="M -25,-15 C 0,50 20,120 50,230 C 5,220 -15,160 -20,70 Z" opacity="0.85" />
+          {/* fourth frond — lower right */}
+          <path d="M -25,-15 C 30,60 90,100 170,200 C 110,210 40,165 5,100 Z" opacity="0.78" />
+          {/* small leaf — far right */}
+          <path d="M -25,-15 C 60,10 160,0 310,30 C 270,65 150,60 50,40 Z" opacity="0.7" />
+        </g>
+
+        {/* RIGHT palm cluster */}
+        <g fill="#07101f">
+          {/* main frond — upper left */}
+          <path d="M 400,-15 C 355,5 295,-30 155,10 C 185,55 295,50 365,35 Z" opacity="0.95" />
+          {/* second frond — spreading left */}
+          <path d="M 400,-15 C 365,30 275,20 95,55 C 135,100 265,95 345,70 Z" opacity="0.88" />
+          {/* third frond — drooping down */}
+          <path d="M 400,-15 C 375,50 355,120 325,230 C 370,220 390,160 395,70 Z" opacity="0.85" />
+          {/* fourth frond — lower left */}
+          <path d="M 400,-15 C 345,60 285,100 205,200 C 265,210 335,165 370,100 Z" opacity="0.78" />
+          {/* small leaf — far left */}
+          <path d="M 400,-15 C 315,10 215,0 65,30 C 105,65 225,60 325,40 Z" opacity="0.7" />
+        </g>
+      </svg>
+
+      {/* ── Close button ──────────────────────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => navigate("/breathe")}
+        className="absolute top-5 right-5 z-30 w-10 h-10 flex items-center justify-center rounded-full transition-opacity hover:opacity-60"
+        style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
+
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="relative z-20 flex flex-col items-center pt-12 pb-2 px-6">
+        {/* Bullseye / target icon */}
+        <div className="relative flex items-center justify-center mb-1">
+          <svg width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" stroke={pattern.color} strokeWidth="1.2" fill="none" opacity="0.4" />
+            <circle cx="20" cy="20" r="12" stroke={pattern.color} strokeWidth="1.2" fill="none" opacity="0.55" />
+            <circle cx="20" cy="20" r="6"  stroke={pattern.color} strokeWidth="1.2" fill="none" opacity="0.7" />
+            <circle cx="20" cy="20" r="2"  fill={pattern.color} opacity="0.8" />
+          </svg>
+        </div>
+        <p className="text-xs mb-5" style={{ color: "rgba(255,255,255,0.35)" }}>
+          {pattern.totalMinutes} min
+        </p>
+
+        {/* Emotion title */}
+        <h1 className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: "-0.3px" }}>
+          {pattern.label}
+        </h1>
+        <p className="text-sm text-center" style={{ color: "rgba(160,180,220,0.6)" }}>
+          {pattern.tagline}
+        </p>
+      </div>
+
+      {/* ── Wave + circle ─────────────────────────────────────────────────── */}
+      <div className="flex-1 relative z-10" style={{ minHeight: 240 }}>
+        {/* Wave line — viewBox 0 0 100 100, preserveAspectRatio=none → always edge-to-edge */}
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="absolute inset-0 w-full h-full"
+          style={{ overflow: "visible" }}
+        >
+          <motion.path
+            d={wavePath}
+            stroke={pattern.color}
+            strokeWidth="0.5"
+            vectorEffect="non-scaling-stroke"
+            fill="none"
+            opacity={running ? 0.72 : 0.3}
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {/* Circle orb — HTML div so it stays perfectly circular at any viewport */}
+        <motion.div
+          className="absolute left-1/2 pointer-events-none"
+          style={{
+            top: circleTopStr,
+            x: "-50%",
+            y: "-50%",
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            backgroundColor: "#0B1628",
+            border: `1.5px solid ${pattern.color}`,
+            opacity: running ? 1 : 0.45,
+            boxShadow: `0 0 22px 4px ${pattern.color}22`,
+          }}
+        />
+      </div>
+
+      {/* ── Phase label + timer ────────────────────────────────────────────── */}
+      <div className="relative z-20 flex flex-col items-center pb-3">
+        <AnimatePresence mode="wait">
+          {done ? (
+            <motion.p
+              key="done"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-3xl font-semibold text-white mb-1"
+            >
+              Done ✓
+            </motion.p>
+          ) : (
+            <motion.p
+              key={running ? currentPhase.name : "idle"}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.4 }}
+              className="text-3xl font-semibold text-white mb-1"
+            >
+              {running ? currentPhase.text : "—"}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <p className="text-sm tabular-nums mb-6" style={{ color: "rgba(255,255,255,0.28)" }}>
+          {running && !done ? timeLeftStr : `${pattern.totalMinutes}:00`}
+        </p>
+
+        {/* CTA button */}
+        {!running && !done && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            type="button"
+            onClick={start}
+            className="mb-5 px-8 py-3 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+            style={{ backgroundColor: pattern.color + "33", border: `1px solid ${pattern.color}55`, color: "rgba(255,255,255,0.9)" }}
+          >
+            start · {pattern.totalMinutes} min
+          </motion.button>
+        )}
+        {done && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            type="button"
+            onClick={() => navigate("/breathe")}
+            className="mb-5 px-8 py-3 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+            style={{ backgroundColor: pattern.color + "33", border: `1px solid ${pattern.color}55` }}
+          >
+            back to breathe
+          </motion.button>
+        )}
+
+        {/* Bottom icon bar */}
+        <div className="flex items-center gap-4 pb-8">
+          {[
+            { Icon: UserRound, label: "guide" },
+            { Icon: Music2,    label: "sound" },
+            { Icon: Vibrate,   label: "haptic" },
+          ].map(({ Icon, label }) => (
+            <button
+              key={label}
+              type="button"
+              aria-label={label}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center transition-opacity hover:opacity-70"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.07)" }}
+            >
+              <Icon className="w-5 h-5" style={{ color: pattern.color }} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
