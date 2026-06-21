@@ -1,14 +1,16 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import websocket_router, auth_router, settings_router, sessions_router, tts_router, relief_router
+from app.routers import websocket_router, auth_router, settings_router, sessions_router, tts_router, relief_router, payments_router
 from app.core.database import init_db
+from app.db.subscriptions import init_subscriptions_table
 
 app = FastAPI()
 
 @app.on_event("startup")
 def on_startup():
     init_db()
+    init_subscriptions_table()
 
 # Configure CORS based on environment
 _raw_origins = os.getenv(
@@ -34,6 +36,7 @@ app.include_router(sessions_router)
 app.include_router(websocket_router)
 app.include_router(tts_router)
 app.include_router(relief_router)
+app.include_router(payments_router)
 
 @app.get("/", tags=['Root'])
 def read_root():

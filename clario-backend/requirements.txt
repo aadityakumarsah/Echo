@@ -20,5 +20,8 @@ python-multipart>=0.0.22
 websockets>=16.0
 loguru>=0.7.3
 
+# Payments
+stripe>=7.0.0
+
 # Database (via Supabase SDK)
 # Note: Supabase dependencies are handled through google-genai/langchain
