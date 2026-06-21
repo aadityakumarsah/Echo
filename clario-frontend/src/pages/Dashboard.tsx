@@ -23,10 +23,10 @@ const fadeUp = {
 };
 
 const PERSONAS = [
+  { id: "chill_overthinker", name: "Chill Overthinker", desc: "Gets your spirals because they spiral too", greeting: "Open in a relaxed, understanding tone, then ask how their day was. No pressure—just genuine curiosity." },
   { id: "vanilla", name: "Vanilla", desc: "Default Clario style—friendly, chatty, balanced journaling partner", greeting: "Open with a friendly, casual hello, then ask how their day was. Match the warm, light tone from your main instructions—no extra persona layer." },
   { id: "chaotic_friend", name: "Chaotic Friend", desc: "Unfiltered, dramatic, and will absolutely call you out (with love)", greeting: "Open with a quick warm hello in your playful style, then ask how their day was. Keep it light—no monologue." },
   { id: "older_sibling", name: "Older Sibling", desc: "Caring, protective, and gently calls you out when needed", greeting: "Open with a warm, casual check-in, then ask how their day was. Sound like you actually care, not like an interrogation." },
-  { id: "chill_overthinker", name: "Chill Overthinker", desc: "Gets your spirals because they spiral too", greeting: "Open in a relaxed, understanding tone, then ask how their day was. No pressure—just genuine curiosity." },
   { id: "insight_coach", name: "Insight Coach", desc: "Cuts through the noise and shows you the pattern", greeting: "Open calmly and kindly, then ask how their day was. You can add one short follow-up like what felt most important about it." },
   { id: "calm_observer", name: "Calm Observer", desc: "Quiet, grounded, and sees what you're not saying", greeting: "Open with a soft, brief greeting, then simply ask how their day was. Stay unhurried and present." },
 ];
@@ -53,7 +53,7 @@ const Dashboard = () => {
   const [archiveReportSession, setArchiveReportSession] = useState<SessionDetailData | null>(null);
   const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0].id);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
-  const [selectedLanguage, setSelectedLanguage] = useState<SessionLanguage>("en");
+  const [selectedLanguage, setSelectedLanguage] = useState<SessionLanguage>("ne");
 
   const currentStreak = useMemo(
     () => computeJournalStreak(pastCards.map((c) => c.detail)),
