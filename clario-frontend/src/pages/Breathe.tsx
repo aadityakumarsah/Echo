@@ -97,7 +97,7 @@ export default function Breathe() {
     <div className="min-h-screen" style={{ backgroundColor: "#060F1E" }}>
       <Navbar />
 
-      <div className="pt-28 pb-16 px-4 max-w-2xl mx-auto">
+      <div className="pt-28 pb-24 md:pb-16 px-4 max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6 px-1">
           <h1 className="text-white text-3xl font-bold" style={{ letterSpacing: "-0.5px" }}>
@@ -108,21 +108,25 @@ export default function Breathe() {
           </p>
         </div>
 
-        {/* Masonry grid — two columns */}
-        <div className="flex gap-2.5 items-start">
-          {/* Left column */}
+        {/* Mobile: 2-col masonry */}
+        <div className="flex md:hidden gap-2.5 items-start">
           <div className="flex flex-col gap-2.5 flex-1">
             {leftCol.map((e, i) => (
               <EmotionCard key={e.key} emotion={e} height={LEFT_H[i] ?? 190} />
             ))}
           </div>
-
-          {/* Right column — offset for stagger */}
           <div className="flex flex-col gap-2.5 flex-1 mt-7">
             {rightCol.map((e, i) => (
               <EmotionCard key={e.key} emotion={e} height={RIGHT_H[i] ?? 200} />
             ))}
           </div>
+        </div>
+
+        {/* Desktop: 4-col uniform grid */}
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {EMOTIONS.map((e) => (
+            <EmotionCard key={e.key} emotion={e} height={240} />
+          ))}
         </div>
       </div>
     </div>
