@@ -54,7 +54,8 @@ const Dashboard = () => {
   const { displayName } = useAuth();
   const navigate = useNavigate();
   const isPaidUser = !accessLoading && hasAccess && trialDaysLeft === 0;
-  const voiceLocked = !accessLoading && (!hasAccess || trialDaysLeft > 0);
+  // Fail-closed: while loading treat as locked so users can't tap through during the check
+  const voiceLocked = accessLoading || !hasAccess || trialDaysLeft > 0;
 
   const [pastCards, setPastCards] = useState<PastSessionCardModel[]>([]);
   const [pastSessionsLoading, setPastSessionsLoading] = useState(true);
