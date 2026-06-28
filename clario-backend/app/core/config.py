@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_JWT_SECRET: str = ""
 
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
     # Gemini settings
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3.1-flash-live-preview"

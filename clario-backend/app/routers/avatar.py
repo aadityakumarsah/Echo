@@ -1,45 +1,53 @@
 """
 Avatar upload endpoint.
-Accepts a multipart image from the mobile app, uploads it to Cloudinary
-using a SIGNED upload (API secret stays server-side only), and returns the
-secure URL + public_id for storage in Supabase user metadata.
-
-Required env vars (set in Render dashboard):
-  CLOUDINARY_CLOUD_NAME
-  CLOUDINARY_API_KEY
-  CLOUDINARY_API_SECRET
+- Signed Cloudinary upload (API secret stays server-side)
+- Auto-deletes previous avatar from Cloudinary when a new one is uploaded
+- Uses app.core.config.settings (pydantic_settings) so Render env vars are read correctly
 """
 
-import os
 import hashlib
-import hmac
 import time
 import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from pydantic import BaseModel
+from typing import Optional
 
 from app.core.auth import get_current_user
+from app.core.config import settings
 
 avatar_router = APIRouter(prefix="/avatar", tags=["Avatar"])
 
 
-def _cloudinary_signed_params(public_id: str, folder: str, eager: str, timestamp: int) -> dict:
-    """Build the signed parameter dict for a Cloudinary signed upload."""
-    api_secret = os.getenv("CLOUDINARY_API_SECRET", "")
-    api_key    = os.getenv("CLOUDINARY_API_KEY", "")
+# ── helpers ───────────────────────────────────────────────────────────────────
 
-    params = {
-        "eager":      eager,
-        "folder":     folder,
-        "public_id":  public_id,
-        "timestamp":  str(timestamp),
-    }
-    # Signature: alphabetically sorted key=value pairs joined by &, then SHA-1 with secret
+def _sign(params: dict) -> str:
+    """SHA-1 signature over sorted key=value pairs + API secret."""
     sorted_str = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-    sig = hashlib.sha1(f"{sorted_str}{api_secret}".encode()).hexdigest()
+    return hashlib.sha1(f"{sorted_str}{settings.CLOUDINARY_API_SECRET}".encode()).hexdigest()
 
-    return {**params, "api_key": api_key, "signature": sig}
+
+def _upload_params(public_id: str, folder: str, eager: str, timestamp: int) -> dict:
+    p = {"eager": eager, "folder": folder, "public_id": public_id, "timestamp": str(timestamp)}
+    return {**p, "api_key": settings.CLOUDINARY_API_KEY, "signature": _sign(p)}
+
+
+def _delete_params(public_id: str, timestamp: int) -> dict:
+    p = {"public_id": public_id, "timestamp": str(timestamp)}
+    return {**p, "api_key": settings.CLOUDINARY_API_KEY, "signature": _sign(p)}
+
+
+# ── routes ────────────────────────────────────────────────────────────────────
+
+@avatar_router.get("/config-check")
+def config_check():
+    """Debug: confirms whether Cloudinary env vars are loaded (no secrets exposed)."""
+    return {
+        "CLOUDINARY_CLOUD_NAME":  bool(settings.CLOUDINARY_CLOUD_NAME),
+        "CLOUDINARY_API_KEY":     bool(settings.CLOUDINARY_API_KEY),
+        "CLOUDINARY_API_SECRET":  bool(settings.CLOUDINARY_API_SECRET),
+        "cloud_name":             settings.CLOUDINARY_CLOUD_NAME or "NOT SET",
+    }
 
 
 class AvatarUploadResponse(BaseModel):
@@ -50,43 +58,47 @@ class AvatarUploadResponse(BaseModel):
 @avatar_router.post("/upload", response_model=AvatarUploadResponse)
 async def upload_avatar(
     file: UploadFile = File(...),
+    old_public_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "")
-    if not cloud_name or not os.getenv("CLOUDINARY_API_SECRET"):
+    if not settings.CLOUDINARY_CLOUD_NAME or not settings.CLOUDINARY_API_SECRET:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cloudinary is not configured on this server.",
         )
+
+    image_bytes = await file.read()
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image must be under 10 MB.")
 
     user_id   = current_user.get("id") or current_user.get("sub", "unknown")
     timestamp = int(time.time())
     public_id = f"user_{user_id}"
     folder    = "avatars"
     eager     = "c_fill,g_face,w_200,h_200,f_auto,q_auto"
-
-    signed = _cloudinary_signed_params(public_id, folder, eager, timestamp)
-
-    image_bytes = await file.read()
-    if len(image_bytes) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Image must be under 10 MB.")
-
-    upload_url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+    base_url  = f"https://api.cloudinary.com/v1_1/{settings.CLOUDINARY_CLOUD_NAME}/image"
 
     async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
-            upload_url,
-            data=signed,
+        # 1. Upload new image
+        upload_resp = await client.post(
+            f"{base_url}/upload",
+            data=_upload_params(public_id, folder, eager, timestamp),
             files={"file": (file.filename or "avatar.jpg", image_bytes, file.content_type or "image/jpeg")},
         )
+        if upload_resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Cloudinary upload failed: {upload_resp.text[:300]}")
 
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Cloudinary upload failed: {response.text[:300]}",
-        )
+        # 2. Delete old image if a previous public_id was supplied and differs
+        prev = old_public_id.strip() if old_public_id else None
+        if prev and prev != public_id:
+            del_ts = int(time.time())
+            await client.post(
+                f"{base_url}/destroy",
+                data=_delete_params(prev, del_ts),
+            )
+            # Ignore delete errors — upload already succeeded
 
-    data = response.json()
+    data = upload_resp.json()
     return AvatarUploadResponse(
         secure_url=data["secure_url"],
         public_id=data["public_id"],
