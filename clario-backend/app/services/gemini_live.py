@@ -167,6 +167,15 @@ class GeminiLive:
             output_audio_transcription=types.AudioTranscriptionConfig(),
             realtime_input_config=types.RealtimeInputConfig(
                 turn_coverage="TURN_INCLUDES_ONLY_ACTIVITY",
+                automatic_activity_detection=types.AutomaticActivityDetection(
+                    # Require a confident speech signal before opening a user turn.
+                    # LOW sensitivity = harder to trigger → residual speaker echo won't
+                    # be mistaken for the user speaking.
+                    start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                    # HIGH end sensitivity = close the user turn quickly once they stop,
+                    # so trailing echo after a real utterance isn't appended.
+                    end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+                ),
             ),
             tools=self.tools,
         )

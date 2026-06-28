@@ -219,14 +219,17 @@ def generate_call_report(
     """
     session = get_session_for_user(session_id, user_id)
     if not session:
+        logger.warning("generate_call_report: session not found | session_id={}", session_id)
         return None
 
     messages = list_messages_for_session(session_id, user_id)
     if messages is None:
+        logger.warning("generate_call_report: messages fetch failed | session_id={}", session_id)
         return None
 
     messages = [m for m in messages if (m.get("message") or "").strip()]
     if not messages:
+        logger.warning("generate_call_report: no non-empty messages saved | session_id={}", session_id)
         return None
 
     created_raw = session.get("created_at")
