@@ -55,7 +55,7 @@ app.include_router(payments_router)
 app.include_router(avatar_router)
 app.include_router(daily_checks_router)
 
-@app.get("/", tags=['Root'])
+@app.api_route("/", methods=["GET", "HEAD"], tags=['Root'])
 def read_root():
     return {"message": "Clario Backend!"}
 
