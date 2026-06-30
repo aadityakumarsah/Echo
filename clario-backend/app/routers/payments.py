@@ -1,10 +1,15 @@
-"""Stripe payment routes — checkout, webhook, subscription status."""
+"""Dodo Payments routes — checkout, webhook, subscription status."""
+import base64
+import hashlib
+import hmac
+import json
 import os
 import time
 from datetime import datetime, timezone
 
-import stripe
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from loguru import logger
 from pydantic import BaseModel
 
@@ -13,26 +18,33 @@ from app.db.subscriptions import get_subscription, upsert_subscription
 
 payments_router = APIRouter(prefix="/payments", tags=["Payments"])
 
-def _price_ids() -> dict[str, str]:
-    """Read at call time so load_dotenv() has already populated os.environ."""
+_DODO_TEST_BASE = "https://test.dodopayments.com"
+_DODO_LIVE_BASE = "https://live.dodopayments.com"
+
+
+def _dodo_base() -> str:
+    return _DODO_LIVE_BASE if os.getenv("DODO_LIVE", "").lower() == "true" else _DODO_TEST_BASE
+
+
+def _dodo_headers() -> dict:
+    api_key = os.getenv("DODO_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="DODO_API_KEY not configured")
+    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+
+def _product_ids() -> dict[str, str]:
     return {
-        "weekly": os.getenv("STRIPE_PRICE_WEEKLY", ""),
-        "monthly": os.getenv("STRIPE_PRICE_MONTHLY", ""),
-        "yearly": os.getenv("STRIPE_PRICE_YEARLY", ""),
+        "weekly":  os.getenv("DODO_PRODUCT_WEEKLY",  "pdt_0NiAXvN7vcS31vtjnOlZx"),
+        "monthly": os.getenv("DODO_PRODUCT_MONTHLY", "pdt_0NiAY0OPAdfxMC6MY7yoU"),
+        "yearly":  os.getenv("DODO_PRODUCT_YEARLY",  "pdt_0NiAY68nBNPhmCDwZTWLS"),
     }
 
 
-def _stripe_client() -> stripe.StripeClient:
-    secret_key = os.getenv("STRIPE_SECRET_KEY", "")
-    if not secret_key:
-        raise HTTPException(status_code=500, detail="STRIPE_SECRET_KEY not configured")
-    return stripe.StripeClient(secret_key)
-
-
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# ── Schemas ────────────────────────────────────────────────────────────────────
 
 class CheckoutRequest(BaseModel):
-    plan: str  # "weekly" | "monthly" | "yearly"
+    plan: str          # "weekly" | "monthly" | "yearly"
     success_url: str
     cancel_url: str
 
@@ -49,6 +61,53 @@ class SubscriptionStatusResponse(BaseModel):
     started_at: str | None
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _plan_from_product_id(product_id: str) -> str | None:
+    for plan, pid in _product_ids().items():
+        if pid == product_id:
+            return plan
+    return None
+
+
+def _parse_ts(value) -> int | None:
+    """Convert ISO datetime string or unix timestamp to int seconds."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return int(dt.timestamp())
+    except Exception:
+        return None
+
+
+def _verify_dodo_signature(
+    webhook_id: str,
+    webhook_timestamp: str,
+    payload: bytes,
+    signature_header: str,
+    secret: str,
+) -> bool:
+    """Verify Dodo Payments webhook signature (svix / webhooks.fyi standard)."""
+    signed_content = f"{webhook_id}.{webhook_timestamp}.{payload.decode()}"
+
+    # Secret may be raw or base64-encoded (some providers prefix with "whsec_")
+    try:
+        raw_secret = base64.b64decode(secret[6:] if secret.startswith("whsec_") else secret)
+    except Exception:
+        raw_secret = secret.encode()
+
+    expected = base64.b64encode(
+        hmac.new(raw_secret, signed_content.encode(), hashlib.sha256).digest()
+    ).decode()
+
+    # Header may contain space-separated "v1,<base64sig>" tokens
+    sigs = [s.split(",", 1)[-1] if "," in s else s for s in signature_header.split()]
+    return any(hmac.compare_digest(expected, sig) for sig in sigs)
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @payments_router.post("/create-checkout-session", response_model=CheckoutResponse)
@@ -56,256 +115,259 @@ def create_checkout_session(
     body: CheckoutRequest,
     user: dict = Depends(get_current_user),
 ):
-    price_ids = _price_ids()
-    if body.plan not in price_ids:
+    product_ids = _product_ids()
+    if body.plan not in product_ids:
         raise HTTPException(status_code=400, detail=f"Unknown plan: {body.plan}")
 
-    price_id = price_ids[body.plan]
-    if not price_id:
-        raise HTTPException(
-            status_code=500,
-            detail=f"STRIPE_PRICE_{body.plan.upper()} env var not set",
-        )
-
-    # Reject unauthenticated (guest) users — they have no real email for Stripe
     user_email = user.get("email", "")
-    if user.get("id") == "guest" or not user_email or user_email == "guest@local":
+    user_id = user.get("id", "")
+    if user_id == "guest" or not user_email or user_email == "guest@local":
         raise HTTPException(status_code=401, detail="Sign in to start a subscription")
 
-    client = _stripe_client()
-    user_id = user["id"]
-
-    # Check if this user already has a Stripe customer ID
-    existing = get_subscription(user_id)
-    customer_id = existing.get("stripe_customer_id") if existing else None
-
-    # Append Stripe's session_id template so the success page can call /payments/sync
-    success_url = body.success_url
-    sep = "&" if "?" in success_url else "?"
-    success_url = f"{success_url}{sep}session_id={{CHECKOUT_SESSION_ID}}"
-
-    session_params: dict = {
-        "mode": "subscription",
-        "line_items": [{"price": price_id, "quantity": 1}],
-        "success_url": success_url,
-        "cancel_url": body.cancel_url,
-        "metadata": {"user_id": user_id},
-        "subscription_data": {"metadata": {"user_id": user_id}},
+    product_id = product_ids[body.plan]
+    payload = {
+        "product_cart": [{"product_id": product_id, "quantity": 1}],
+        "customer": {"email": user_email},
+        "return_url": body.success_url,
+        "metadata": {"user_id": user_id, "plan": body.plan},
     }
-    if customer_id:
-        session_params["customer"] = customer_id
-    else:
-        session_params["customer_email"] = user_email
 
     try:
-        session = client.v1.checkout.sessions.create(params=session_params)
-    except stripe.StripeError as e:
-        logger.error("Stripe error creating checkout session: {}", e)
-        raise HTTPException(status_code=502, detail=str(e))
+        resp = httpx.post(
+            f"{_dodo_base()}/checkout-sessions",
+            headers=_dodo_headers(),
+            json=payload,
+            timeout=30,
+        )
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error("Dodo create checkout error: {} {}", e.response.status_code, e.response.text)
+        raise HTTPException(status_code=502, detail=f"Payment provider error: {e.response.text}")
+    except httpx.RequestError as e:
+        logger.error("Dodo create checkout network error: {}", e)
+        raise HTTPException(status_code=502, detail="Could not reach payment provider")
 
-    return CheckoutResponse(url=session.url, session_id=session.id)
+    data = resp.json()
+    checkout_url = data.get("checkout_url") or data.get("url", "")
+    session_id   = data.get("session_id")   or data.get("id", "")
+
+    if not checkout_url:
+        logger.error("Dodo checkout response missing checkout_url: {}", data)
+        raise HTTPException(status_code=502, detail="Payment provider returned unexpected response")
+
+    return CheckoutResponse(url=checkout_url, session_id=session_id)
 
 
 @payments_router.post("/webhook")
-async def stripe_webhook(
-    request: Request,
-    stripe_signature: str = Header(None, alias="stripe-signature"),
-):
-    """Stripe sends events here — NOT protected by JWT."""
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    # Allow skipping verification only when explicitly opted in for local dev
-    skip_verification = os.getenv("STRIPE_SKIP_WEBHOOK_VERIFICATION", "").lower() == "true"
-    payload = await request.body()
+async def dodo_webhook(request: Request):
+    """Dodo Payments sends events here — NOT protected by JWT."""
+    webhook_secret = os.getenv("DODO_WEBHOOK_SECRET", "")
+    payload_bytes  = await request.body()
 
     if webhook_secret:
-        if not stripe_signature:
-            logger.warning("Stripe webhook received without signature header")
-            raise HTTPException(status_code=400, detail="Missing stripe-signature header")
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, stripe_signature, webhook_secret
-            )
-        except stripe.SignatureVerificationError as e:
-            logger.warning("Stripe webhook signature verification failed: {}", e)
-            raise HTTPException(status_code=400, detail="Invalid signature")
-    elif skip_verification:
-        logger.warning("STRIPE_SKIP_WEBHOOK_VERIFICATION=true — skipping signature check (dev only)")
-        import json
-        event = json.loads(payload)
+        wh_id        = request.headers.get("webhook-id", "")
+        wh_timestamp = request.headers.get("webhook-timestamp", "")
+        wh_signature = request.headers.get("webhook-signature", "")
+
+        if not wh_id or not wh_timestamp or not wh_signature:
+            logger.warning("Dodo webhook missing signature headers")
+            raise HTTPException(status_code=400, detail="Missing webhook signature headers")
+
+        if not _verify_dodo_signature(wh_id, wh_timestamp, payload_bytes, wh_signature, webhook_secret):
+            logger.warning("Dodo webhook signature verification failed")
+            raise HTTPException(status_code=400, detail="Invalid webhook signature")
     else:
-        # No secret configured and skip not set — reject to prevent fake events
-        logger.error("STRIPE_WEBHOOK_SECRET not set. Set it or STRIPE_SKIP_WEBHOOK_VERIFICATION=true for local dev.")
-        raise HTTPException(status_code=500, detail="Webhook not configured")
+        logger.warning("DODO_WEBHOOK_SECRET not set — accepting webhook without verification (dev only)")
 
-    event_type = event["type"] if isinstance(event, dict) else event.type
-    data_obj = event["data"]["object"] if isinstance(event, dict) else event.data.object
+    try:
+        event = json.loads(payload_bytes)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    logger.info("Stripe webhook event: {}", event_type)
+    event_type = event.get("type") or event.get("event_type", "")
+    # Dodo wraps the subscription object in "data" or "payload"
+    data = event.get("data") or event.get("payload") or {}
 
-    if event_type == "checkout.session.completed":
-        _handle_checkout_completed(data_obj)
-    elif event_type in ("customer.subscription.deleted", "customer.subscription.updated"):
-        _handle_subscription_change(data_obj)
-    elif event_type == "invoice.payment_succeeded":
-        _handle_invoice_payment_succeeded(data_obj)
-    elif event_type == "invoice.payment_failed":
-        _handle_invoice_payment_failed(data_obj)
+    logger.info("Dodo webhook event: {}", event_type)
+
+    if event_type in ("subscription.active", "subscription.created"):
+        _handle_subscription_active(data)
+    elif event_type in ("subscription.cancelled", "subscription.failed"):
+        _handle_subscription_cancelled(data)
+    elif event_type == "subscription.renewed":
+        _handle_subscription_renewed(data)
+    elif event_type == "subscription.on_hold":
+        _handle_subscription_on_hold(data)
 
     return {"received": True}
 
 
-def _handle_checkout_completed(session: dict) -> None:
-    user_id = session.get("metadata", {}).get("user_id")
+def _handle_subscription_active(data: dict) -> None:
+    sub_id   = data.get("subscription_id") or data.get("id", "")
+    metadata = data.get("metadata") or {}
+    user_id  = metadata.get("user_id", "")
+
     if not user_id:
-        logger.warning("checkout.session.completed missing user_id in metadata")
+        logger.warning("subscription.active missing user_id in metadata, sub_id={}", sub_id)
         return
 
-    customer_id = session.get("customer")
-    subscription_id = session.get("subscription")
-
-    plan = None
-    current_period_end = None
-    started_at = None
-    status = "active"
-
-    if subscription_id:
-        secret_key = os.getenv("STRIPE_SECRET_KEY", "")
-        if secret_key:
-            try:
-                client = stripe.StripeClient(secret_key)
-                sub_obj = client.v1.subscriptions.retrieve(subscription_id)
-                sub = sub_obj.to_dict() if hasattr(sub_obj, "to_dict") else dict(sub_obj)
-                status = sub.get("status", "active")
-                current_period_end = sub.get("current_period_end")
-                started_at = sub.get("start_date")  # Unix ts of when subscription started
-                items = sub.get("items", {}).get("data", [])
-                if items:
-                    price = items[0].get("price", {})
-                    interval = (price.get("recurring") or {}).get("interval")
-                    if interval == "week":
-                        plan = "weekly"
-                    elif interval == "month":
-                        plan = "monthly"
-                    elif interval == "year":
-                        plan = "yearly"
-            except Exception as e:
-                logger.error("Failed to retrieve subscription {}: {}", subscription_id, e)
+    product_id = data.get("product_id", "")
+    plan       = _plan_from_product_id(product_id) or metadata.get("plan")
+    period_end = _parse_ts(data.get("current_period_end") or data.get("next_billing_date"))
+    started_at = _parse_ts(data.get("created_at") or data.get("start_date"))
 
     upsert_subscription(
         user_id=user_id,
-        stripe_customer_id=customer_id,
-        stripe_subscription_id=subscription_id,
+        stripe_subscription_id=sub_id,
         plan=plan,
-        status=status,
-        current_period_end=current_period_end,
+        status="active",
+        current_period_end=period_end,
         started_at=started_at,
     )
-    logger.info("Subscription activated for user {}: plan={}", user_id, plan)
+    logger.info("Subscription activated for user {}: plan={} sub_id={}", user_id, plan, sub_id)
 
 
-def _handle_subscription_change(subscription: dict) -> None:
-    """Handle subscription updates/cancellations."""
-    if isinstance(subscription, dict):
-        user_id = subscription.get("metadata", {}).get("user_id")
-        sub_id = subscription.get("id")
-        status = subscription.get("status")
-        current_period_end = subscription.get("current_period_end")
-    else:
-        user_id = subscription.metadata.get("user_id") if subscription.metadata else None
-        sub_id = subscription.id
-        status = subscription.status
-        current_period_end = subscription.current_period_end
+def _handle_subscription_cancelled(data: dict) -> None:
+    sub_id   = data.get("subscription_id") or data.get("id", "")
+    metadata = data.get("metadata") or {}
+    user_id  = metadata.get("user_id", "")
 
     if not user_id:
-        logger.warning("subscription event missing user_id in metadata, sub_id={}", sub_id)
+        from app.db.subscriptions import get_subscription_by_stripe_sub_id
+        row = get_subscription_by_stripe_sub_id(sub_id)
+        if row:
+            user_id = row["user_id"]
+
+    if not user_id:
+        logger.warning("subscription.cancelled missing user_id, sub_id={}", sub_id)
+        return
+
+    upsert_subscription(user_id=user_id, stripe_subscription_id=sub_id, status="cancelled")
+    logger.info("Subscription cancelled for user {}", user_id)
+
+
+def _handle_subscription_renewed(data: dict) -> None:
+    sub_id     = data.get("subscription_id") or data.get("id", "")
+    period_end = _parse_ts(data.get("current_period_end") or data.get("next_billing_date"))
+    metadata   = data.get("metadata") or {}
+    user_id    = metadata.get("user_id", "")
+
+    if not user_id:
+        from app.db.subscriptions import get_subscription_by_stripe_sub_id
+        row = get_subscription_by_stripe_sub_id(sub_id)
+        if row:
+            user_id = row["user_id"]
+
+    if not user_id:
+        logger.warning("subscription.renewed missing user_id, sub_id={}", sub_id)
         return
 
     upsert_subscription(
         user_id=user_id,
         stripe_subscription_id=sub_id,
-        status=status,
-        current_period_end=current_period_end,
+        status="active",
+        current_period_end=period_end,
     )
-    logger.info("Subscription updated for user {}: status={}", user_id, status)
+    logger.info("Subscription renewed for user {}", user_id)
 
 
-def _handle_invoice_payment_succeeded(invoice: dict) -> None:
-    """Refresh current_period_end when a renewal charge succeeds."""
-    if isinstance(invoice, dict):
-        subscription_id = invoice.get("subscription")
-        customer_id = invoice.get("customer")
-    else:
-        subscription_id = invoice.subscription
-        customer_id = invoice.customer
+def _handle_subscription_on_hold(data: dict) -> None:
+    sub_id   = data.get("subscription_id") or data.get("id", "")
+    metadata = data.get("metadata") or {}
+    user_id  = metadata.get("user_id", "")
 
-    if not subscription_id:
+    if not user_id:
+        from app.db.subscriptions import get_subscription_by_stripe_sub_id
+        row = get_subscription_by_stripe_sub_id(sub_id)
+        if row:
+            user_id = row["user_id"]
+
+    if not user_id:
         return
 
-    # Look up user_id by stripe_subscription_id
-    from app.db.subscriptions import get_subscription_by_stripe_sub_id
-    row = get_subscription_by_stripe_sub_id(subscription_id)
-    if not row:
-        logger.info("invoice.payment_succeeded — no matching subscription row for {}", subscription_id)
-        return
+    upsert_subscription(user_id=user_id, stripe_subscription_id=sub_id, status="past_due")
+    logger.warning("Subscription on_hold for user {}", user_id)
 
-    # Fetch fresh period_end from Stripe
-    secret_key = os.getenv("STRIPE_SECRET_KEY", "")
-    if not secret_key:
-        return
+
+@payments_router.post("/sync")
+def sync_subscription(
+    subscription_id: str | None = None,
+    session_id: str | None = None,
+    user: dict = Depends(get_current_user),
+):
+    """Called from the success page to force-sync subscription from Dodo.
+    Accepts subscription_id (Dodo sub ID) or session_id (legacy / fallback).
+    """
+    if user.get("id") == "guest":
+        raise HTTPException(status_code=401, detail="Sign in to sync subscription")
+
+    user_id = user["id"]
+    dodo_id = subscription_id or session_id
+
+    if not dodo_id:
+        # No ID provided — check if webhook already activated the subscription
+        existing = get_subscription(user_id)
+        if existing and existing.get("status") == "active":
+            return {"synced": True}
+        raise HTTPException(status_code=400, detail="No subscription ID provided")
+
+    # Try fetching from Dodo as subscription ID
     try:
-        client = stripe.StripeClient(secret_key)
-        sub_obj = client.v1.subscriptions.retrieve(subscription_id)
-        sub = sub_obj.to_dict() if hasattr(sub_obj, "to_dict") else dict(sub_obj)
-        current_period_end = sub.get("current_period_end")
-        status = sub.get("status", "active")
+        resp = httpx.get(
+            f"{_dodo_base()}/subscriptions/{dodo_id}",
+            headers=_dodo_headers(),
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            sub      = resp.json()
+            metadata = sub.get("metadata") or {}
+
+            meta_user_id = metadata.get("user_id", "")
+            if meta_user_id and meta_user_id != user_id:
+                raise HTTPException(status_code=403, detail="Subscription does not belong to this user")
+
+            product_id = sub.get("product_id", "")
+            plan       = _plan_from_product_id(product_id) or metadata.get("plan")
+            status_raw = sub.get("status", "active")
+            status     = "active" if status_raw in ("active", "trialing", "paid") else status_raw
+            period_end = _parse_ts(sub.get("current_period_end") or sub.get("next_billing_date"))
+            started_at = _parse_ts(sub.get("created_at") or sub.get("start_date"))
+
+            upsert_subscription(
+                user_id=user_id,
+                stripe_subscription_id=dodo_id,
+                plan=plan,
+                status=status,
+                current_period_end=period_end,
+                started_at=started_at,
+            )
+            return {"synced": True}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Failed to retrieve subscription {} for renewal: {}", subscription_id, e)
-        return
+        logger.error("Dodo sync error for id {}: {}", dodo_id, e)
 
-    upsert_subscription(
-        user_id=row["user_id"],
-        status=status,
-        current_period_end=current_period_end,
-    )
-    logger.info("Subscription renewed for user {}: period_end={}", row["user_id"], current_period_end)
+    # Lookup failed — webhook may have already handled it
+    existing = get_subscription(user_id)
+    if existing and existing.get("status") == "active":
+        return {"synced": True}
 
-
-def _handle_invoice_payment_failed(invoice: dict) -> None:
-    """Mark subscription past_due when a renewal charge fails."""
-    if isinstance(invoice, dict):
-        subscription_id = invoice.get("subscription")
-    else:
-        subscription_id = invoice.subscription
-
-    if not subscription_id:
-        return
-
-    from app.db.subscriptions import get_subscription_by_stripe_sub_id
-    row = get_subscription_by_stripe_sub_id(subscription_id)
-    if not row:
-        logger.info("invoice.payment_failed — no matching subscription row for {}", subscription_id)
-        return
-
-    upsert_subscription(
-        user_id=row["user_id"],
-        status="past_due",
-    )
-    logger.warning("Subscription payment failed for user {} — marked past_due", row["user_id"])
+    raise HTTPException(status_code=404, detail="Subscription not found — payment may still be processing")
 
 
 @payments_router.get("/status", response_model=SubscriptionStatusResponse)
 def get_subscription_status(user: dict = Depends(get_current_user)):
     user_id = user["id"]
-    row = get_subscription(user_id)
+    row     = get_subscription(user_id)
 
     if not row:
         return SubscriptionStatusResponse(active=False, plan=None, expires_at=None, started_at=None)
 
-    status = row.get("status", "")
+    status           = row.get("status", "")
     current_period_end = row.get("current_period_end")
-    now_ts = int(time.time())
+    now_ts           = int(time.time())
 
-    # Active if status is active/trialing AND period hasn't ended
     is_active = status in ("active", "trialing") and (
         current_period_end is None or current_period_end > now_ts
     )
@@ -314,9 +376,8 @@ def get_subscription_status(user: dict = Depends(get_current_user)):
     if current_period_end:
         expires_at = datetime.fromtimestamp(current_period_end, tz=timezone.utc).isoformat()
 
-    # started_at: prefer explicit column, fall back to created_at
     started_at_raw = row.get("started_at") or row.get("created_at")
-    started_at = None
+    started_at     = None
     if started_at_raw:
         if isinstance(started_at_raw, (int, float)):
             started_at = datetime.fromtimestamp(started_at_raw, tz=timezone.utc).isoformat()
@@ -332,14 +393,14 @@ def get_subscription_status(user: dict = Depends(get_current_user)):
 
 
 @payments_router.get("/checkout-return")
-def checkout_return(session_id: str):
-    """
-    Stripe redirects here after successful checkout (HTTPS required by Stripe).
-    Returns an HTML page that JS-navigates to the app deep link — more reliable
-    than a 302 to a custom scheme, which Safari often rejects.
-    """
-    from fastapi.responses import HTMLResponse
-    deep_link = f"clariomobile://paywall/success?session_id={session_id}"
+def checkout_return(
+    subscription_id: str | None = None,
+    payment_status: str | None = None,
+    session_id: str | None = None,
+):
+    """Dodo redirects here after checkout. Returns HTML that deep-links into the mobile app."""
+    ref_id    = subscription_id or session_id or ""
+    deep_link = f"clariomobile://paywall/success?subscription_id={ref_id}"
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -360,10 +421,7 @@ def checkout_return(session_id: str):
   <h1>Payment successful!</h1>
   <p>Opening Clario…</p>
   <a href="{deep_link}">Open Clario</a>
-  <script>
-    // Try to open the app immediately; show the button as fallback
-    window.location.href = "{deep_link}";
-  </script>
+  <script>window.location.href = "{deep_link}";</script>
 </body>
 </html>"""
     return HTMLResponse(content=html)
@@ -371,9 +429,7 @@ def checkout_return(session_id: str):
 
 @payments_router.get("/checkout-cancel")
 def checkout_cancel():
-    """Stripe redirects here on cancel — shows a page that bounces back to paywall."""
-    from fastapi.responses import HTMLResponse
-    deep_link = "clariomobile://paywall"
+    """Dodo redirects here on cancel — shows a page that bounces back to paywall."""
     html = """<!DOCTYPE html>
 <html>
 <head>
@@ -398,35 +454,3 @@ def checkout_cancel():
 </body>
 </html>"""
     return HTMLResponse(content=html)
-
-
-@payments_router.post("/sync")
-def sync_subscription_from_session(
-    session_id: str,
-    user: dict = Depends(get_current_user),
-):
-    """Called from the success page to save the subscription immediately.
-    Fallback for when the Stripe webhook hasn't fired yet.
-    """
-    if user.get("id") == "guest":
-        raise HTTPException(status_code=401, detail="Sign in to sync subscription")
-
-    client = _stripe_client()
-    try:
-        session = client.v1.checkout.sessions.retrieve(session_id)
-    except stripe.StripeError as e:
-        logger.error("Failed to retrieve checkout session {}: {}", session_id, e)
-        raise HTTPException(status_code=502, detail=str(e))
-
-    session_dict = session.to_dict() if hasattr(session, "to_dict") else dict(session)
-
-    meta_user_id = (session_dict.get("metadata") or {}).get("user_id", "")
-
-    # Always require metadata user_id to match the authenticated user
-    if not meta_user_id:
-        raise HTTPException(status_code=403, detail="Session has no user_id in metadata")
-    if meta_user_id != user["id"]:
-        raise HTTPException(status_code=403, detail="Session does not belong to this user")
-
-    _handle_checkout_completed(session_dict)
-    return {"synced": True}

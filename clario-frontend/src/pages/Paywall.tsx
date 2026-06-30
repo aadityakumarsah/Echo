@@ -287,7 +287,7 @@ function PlanCards() {
         </div>
       )}
       <p className="text-xs text-center" style={{ color: "#475569" }}>
-        Cancel anytime. Secure payment via Stripe.
+        Cancel anytime. Secure payment via Dodo Payments.
       </p>
     </motion.div>
   );

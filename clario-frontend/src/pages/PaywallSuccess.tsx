@@ -12,7 +12,8 @@ export default function PaywallSuccess() {
   const [state, setState] = useState<State>("syncing");
   const [attempt, setAttempt] = useState(0);
 
-  const sessionId = searchParams.get("session_id");
+  // Dodo Payments appends ?subscription_id=...; legacy Stripe used session_id
+  const sessionId = searchParams.get("subscription_id") ?? searchParams.get("session_id");
 
   const doSync = useCallback(async () => {
     if (!sessionId) { setState("done"); return; }
