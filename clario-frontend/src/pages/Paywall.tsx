@@ -40,7 +40,7 @@ const PLANS: PlanCard[] = [
   {
     id: "yearly",
     label: "Yearly",
-    price: "$199",
+    price: "$198",
     period: "per year",
     description: "Best value — save over 30%",
     highlight: false,
