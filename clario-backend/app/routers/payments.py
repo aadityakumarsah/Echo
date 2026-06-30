@@ -399,9 +399,9 @@ def get_subscription_status(user: dict = Depends(get_current_user)):
     if not row:
         return SubscriptionStatusResponse(active=False, plan=None, expires_at=None, started_at=None)
 
-    status           = row.get("status", "")
-    current_period_end = row.get("current_period_end")
-    now_ts           = int(time.time())
+    status             = row.get("status", "")
+    current_period_end = _parse_ts(row.get("current_period_end"))  # normalise to int | None
+    now_ts             = int(time.time())
 
     is_active = status in ("active", "trialing") and (
         current_period_end is None or current_period_end > now_ts

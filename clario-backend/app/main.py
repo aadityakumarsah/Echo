@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 # Load .env into os.environ so os.getenv() calls anywhere in the app see the values
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.routers import websocket_router, auth_router, settings_router, sessions_router, tts_router, relief_router, payments_router, avatar_router
 from app.routers.daily_checks import daily_checks_router
 from app.core.database import init_db
@@ -44,6 +45,19 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=600,
 )
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all: log the error and always include CORS headers so the browser
+    gets a proper JSON error instead of a CORS-blocked empty response."""
+    from loguru import logger
+    logger.exception("Unhandled exception on {} {}: {}", request.method, request.url.path, exc)
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return JSONResponse(status_code=500, content={"detail": str(exc)}, headers=headers)
 
 app.include_router(auth_router)
 app.include_router(settings_router)

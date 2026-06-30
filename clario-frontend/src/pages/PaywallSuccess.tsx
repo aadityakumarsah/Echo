@@ -18,31 +18,35 @@ export default function PaywallSuccess() {
 
   const doSync = useCallback(async () => {
     setState("syncing");
+
+    // Dodo redirect with status=active is trusted proof of payment.
+    // Activate locally right away so the user gets access immediately,
+    // then fire a background sync so the DB catches up.
+    if (dodoStatus === "active") {
+      clearSubCache();
+      writeCache({ active: true, plan: null, expires_at: null });
+      setState("done");
+      if (sessionId) {
+        syncSubscription(sessionId).catch((e) => console.warn("Background sync failed:", e));
+      }
+      return;
+    }
+
+    // Fallback: no Dodo status — wait on backend sync
     try {
-      // Try sync — pass subscription_id if we have it
       if (sessionId) {
         await syncSubscription(sessionId);
       }
       clearSubCache();
       const fresh = await getSubscriptionStatus();
       writeCache(fresh);
-      // If Dodo told us payment is active OR our DB confirms it, we're done
-      if (fresh.active || dodoStatus === "active") {
+      if (fresh.active) {
         setState("done");
         return;
       }
-      // Subscription not active yet — treat as error so user can retry
       setState("error");
     } catch (err) {
       console.error("Sync failed:", err);
-      if (dodoStatus === "active") {
-        // Dodo redirect confirms payment — write optimistic active status so the
-        // app doesn't bounce back to paywall before the DB catches up
-        clearSubCache();
-        writeCache({ active: true, plan: null, expires_at: null });
-        setState("done");
-        return;
-      }
       setState("error");
     }
   }, [sessionId, dodoStatus, attempt]);
