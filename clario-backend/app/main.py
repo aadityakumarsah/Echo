@@ -59,8 +59,9 @@ app.include_router(daily_checks_router)
 def read_root():
     return {"message": "Clario Backend!"}
 
-@app.get("/health", tags=['Root'])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=['Root'])
 def health_check():
+    # HEAD is used by UptimeRobot and load balancers — must return 200 with no body
     return {"status": "ok"}
 
 

@@ -18,16 +18,24 @@ export default function PaywallSuccess() {
     if (!sessionId) { setState("done"); return; }
     setState("syncing");
     try {
-      await syncSubscription(sessionId);
-      clearSubCache(); // also resets _inflight so next fetch is fresh
-      // Pre-fetch and cache so AppRoutes sees active=true before navigating
+      await syncSubscription(sessionId); // already retries 8×6s internally
+      clearSubCache();
       const fresh = await getSubscriptionStatus();
       writeCache(fresh);
       setState("done");
-    } catch {
+    } catch (err) {
+      // syncSubscription exhausted all retries — show error with the reason
+      console.error("Sync failed:", err);
       setState("error");
     }
   }, [sessionId, attempt]);
+
+  // Auto-retry once after 8s if the first attempt fails (catches brief server hiccups)
+  useEffect(() => {
+    if (state !== "error" || attempt > 0) return;
+    const t = setTimeout(() => setAttempt(1), 8000);
+    return () => clearTimeout(t);
+  }, [state, attempt]);
 
   useEffect(() => { doSync(); }, [attempt]);
 
