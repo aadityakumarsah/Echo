@@ -18,13 +18,20 @@ from app.db.subscriptions import get_subscription, upsert_subscription
 
 payments_router = APIRouter(prefix="/payments", tags=["Payments"])
 
-_DODO_TEST_BASE = "https://test.dodopayments.com"
-_DODO_LIVE_BASE = "https://live.dodopayments.com"
+_DODO_TEST_BASE  = "https://test.dodopayments.com"
+_DODO_LIVE_BASE  = "https://live.dodopayments.com"
+_DODO_TEST_BUY   = "https://test.checkout.dodopayments.com/buy"
+_DODO_LIVE_BUY   = "https://checkout.dodopayments.com/buy"
 
+
+def _is_live() -> bool:
+    return os.getenv("DODO_LIVE", "").lower() == "true"
 
 def _dodo_base() -> str:
-    return _DODO_LIVE_BASE if os.getenv("DODO_LIVE", "").lower() == "true" else _DODO_TEST_BASE
+    return _DODO_LIVE_BASE if _is_live() else _DODO_TEST_BASE
 
+def _dodo_buy_base() -> str:
+    return _DODO_LIVE_BUY if _is_live() else _DODO_TEST_BUY
 
 def _dodo_headers() -> dict:
     api_key = os.getenv("DODO_API_KEY", "")
@@ -125,37 +132,19 @@ def create_checkout_session(
         raise HTTPException(status_code=401, detail="Sign in to start a subscription")
 
     product_id = product_ids[body.plan]
-    payload = {
-        "product_cart": [{"product_id": product_id, "quantity": 1}],
-        "customer": {"email": user_email},
-        "return_url": body.success_url,
-        "metadata": {"user_id": user_id, "plan": body.plan},
-    }
 
-    try:
-        resp = httpx.post(
-            f"{_dodo_base()}/checkouts",
-            headers=_dodo_headers(),
-            json=payload,
-            timeout=30,
-        )
-        resp.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        logger.error("Dodo create checkout error: {} {}", e.response.status_code, e.response.text)
-        raise HTTPException(status_code=502, detail=f"Payment provider error: {e.response.text}")
-    except httpx.RequestError as e:
-        logger.error("Dodo create checkout network error: {}", e)
-        raise HTTPException(status_code=502, detail="Could not reach payment provider")
+    # Build Dodo hosted payment link — works before products are API-activated.
+    # Email pre-fills the checkout form; redirect_url sends user back after payment.
+    from urllib.parse import urlencode, quote
+    params = urlencode({
+        "quantity": "1",
+        "email": user_email,
+        "redirect_url": body.success_url,
+    })
+    checkout_url = f"{_dodo_buy_base()}/{product_id}?{params}"
 
-    data = resp.json()
-    checkout_url = data.get("checkout_url") or data.get("url", "")
-    session_id   = data.get("session_id")   or data.get("id", "")
-
-    if not checkout_url:
-        logger.error("Dodo checkout response missing checkout_url: {}", data)
-        raise HTTPException(status_code=502, detail="Payment provider returned unexpected response")
-
-    return CheckoutResponse(url=checkout_url, session_id=session_id)
+    logger.info("Dodo payment link for user {} plan {}: {}", user_id, body.plan, checkout_url)
+    return CheckoutResponse(url=checkout_url, session_id=product_id)
 
 
 @payments_router.post("/webhook")
@@ -202,13 +191,37 @@ async def dodo_webhook(request: Request):
     return {"received": True}
 
 
+def _find_user_by_email(email: str) -> str | None:
+    """Look up Supabase user_id by email (fallback when metadata is missing)."""
+    try:
+        from app.core.supabase import get_supabase_client
+        client = get_supabase_client()
+        if not client:
+            return None
+        result = client.auth.admin.list_users()
+        users = result if isinstance(result, list) else getattr(result, "users", [])
+        for u in users:
+            u_email = getattr(u, "email", None) or (u.get("email") if isinstance(u, dict) else None)
+            if u_email and u_email.lower() == email.lower():
+                return getattr(u, "id", None) or (u.get("id") if isinstance(u, dict) else None)
+    except Exception as e:
+        logger.error("Failed to find user by email {}: {}", email, e)
+    return None
+
+
 def _handle_subscription_active(data: dict) -> None:
     sub_id   = data.get("subscription_id") or data.get("id", "")
     metadata = data.get("metadata") or {}
     user_id  = metadata.get("user_id", "")
 
     if not user_id:
-        logger.warning("subscription.active missing user_id in metadata, sub_id={}", sub_id)
+        # Payment link flow: no metadata — look up user by customer email
+        customer = data.get("customer") or {}
+        email = customer.get("email") or data.get("customer_email") or data.get("email", "")
+        if email:
+            user_id = _find_user_by_email(email) or ""
+    if not user_id:
+        logger.warning("subscription.active: cannot identify user, sub_id={}", sub_id)
         return
 
     product_id = data.get("product_id", "")
@@ -305,11 +318,12 @@ def sync_subscription(
     dodo_id = subscription_id or session_id
 
     if not dodo_id:
-        # No ID provided — check if webhook already activated the subscription
+        # Payment link flow: no session ID — check if webhook already activated it
         existing = get_subscription(user_id)
         if existing and existing.get("status") == "active":
             return {"synced": True}
-        raise HTTPException(status_code=400, detail="No subscription ID provided")
+        # Webhook hasn't fired yet — tell client to retry
+        raise HTTPException(status_code=503, detail="Subscription not yet activated — please retry")
 
     # Try fetching from Dodo as subscription ID
     try:
