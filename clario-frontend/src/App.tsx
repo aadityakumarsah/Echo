@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAccess } from "@/hooks/useAccess";
+import { useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index.tsx";
 import About from "./pages/About.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
@@ -26,16 +27,25 @@ import ReliefBlocks from "./pages/ReliefBlocks.tsx";
 import Paywall from "./pages/Paywall.tsx";
 import PaywallSuccess from "./pages/PaywallSuccess.tsx";
 import TrialBanner from "./components/TrialBanner.tsx";
+import Login from "./pages/Login.tsx";
+import Onboard from "./pages/Onboard.tsx";
 
 const queryClient = new QueryClient();
 
-const UNGUARDED_PATHS = ["/paywall", "/paywall/success"];
+const UNGUARDED_PATHS = ["/paywall", "/paywall/success", "/login", "/onboard"];
 
 function AppRoutes() {
   const location = useLocation();
   const { hasAccess, isPremium, trialDaysLeft, loading } = useAccess();
+  const { user, loading: authLoading } = useAuth();
 
   const isUnguarded = UNGUARDED_PATHS.some((p) => location.pathname.startsWith(p));
+
+  // Redirect logged-in users who haven't completed onboarding
+  const hasOnboarded = !!localStorage.getItem("clario-onboarded");
+  if (!authLoading && user && !hasOnboarded && !isUnguarded) {
+    return <Navigate to="/onboard" replace />;
+  }
 
   if (loading && !isUnguarded) {
     return (
@@ -78,6 +88,8 @@ function AppRoutes() {
         <Route path="/relief/blocks" element={<ReliefBlocks />} />
         <Route path="/paywall" element={<Paywall />} />
         <Route path="/paywall/success" element={<PaywallSuccess />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/onboard" element={<Onboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

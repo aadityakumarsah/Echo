@@ -64,8 +64,12 @@ function AuthForm() {
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name.trim() } } });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name.trim() } } });
         if (error) throw error;
+        if (data.session) {
+          window.location.href = "/onboard";
+          return;
+        }
         setSuccess("Check your email to confirm your account, then sign in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
