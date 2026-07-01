@@ -260,7 +260,7 @@ const Settings = () => {
                         {subPlan ? subPlan.charAt(0).toUpperCase() + subPlan.slice(1) + " plan" : "Premium"}
                       </span>
                     ) : trialActive ? (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#1E1040", color: "#A78BFA" }}>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "hsl(var(--card))", color: "hsl(var(--primary))" }}>
                         Trial · {trialDaysLeft}d left
                       </span>
                     ) : (
@@ -297,7 +297,7 @@ const Settings = () => {
                   style={{ background: "linear-gradient(145deg, #151430 0%, #111128 100%)", border: "1.5px solid rgba(109,40,217,0.55)" }}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span style={{ color: "#A78BFA" }}>✦</span>
+                    <span style={{ color: "hsl(var(--primary))" }}>✦</span>
                     <h2 className="font-display text-base font-semibold" style={{ color: "#FFFFFF" }}>Upgrade your plan</h2>
                   </div>
                   <p className="font-body text-sm mb-4" style={{ color: "#8B8B70" }}>

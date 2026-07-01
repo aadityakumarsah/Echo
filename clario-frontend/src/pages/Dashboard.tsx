@@ -196,7 +196,7 @@ const Dashboard = () => {
                       className="w-20 h-20 rounded-full flex items-center justify-center"
                       style={{ background: "rgba(124,58,237,0.08)", border: "1.5px solid rgba(124,58,237,0.25)" }}
                     >
-                      <Lock className="w-7 h-7" style={{ color: "#7C3AED", opacity: 0.7 }} />
+                      <Lock className="w-7 h-7" style={{ color: "hsl(var(--primary))", opacity: 0.7 }} />
                     </div>
                     <p className="font-body text-sm text-muted-foreground">
                       Voice agent is a premium feature
@@ -204,7 +204,7 @@ const Dashboard = () => {
                     <button
                       onClick={() => navigate("/paywall")}
                       className="px-5 py-2 rounded-xl text-sm font-semibold transition-colors"
-                      style={{ background: "#7C3AED", color: "#fff" }}
+                      style={{ background: "hsl(var(--primary))", color: "#fff" }}
                     >
                       Upgrade to unlock
                     </button>

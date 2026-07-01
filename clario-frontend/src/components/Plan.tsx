@@ -40,7 +40,7 @@ const plans = [
     price: 300,
     tag: "Full potential",
     description: "Unlimited everything. No ceilings, no throttling — pure, unrestricted power.",
-    color: "#7C3AED",
+    color: "hsl(var(--primary))",
     features: [
       { label: "Reports per day", value: "Unlimited", unlimited: true },
       { label: "API calls per day", value: "Unlimited", unlimited: true },
@@ -247,7 +247,7 @@ export default function Plan() {
             <br />
             <span
               style={{
-                background: "linear-gradient(135deg, #D4841A, #7C3AED, #4A6FA5)",
+                background: "linear-gradient(135deg, #E0A94A, hsl(var(--primary)), #4A6FA5)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -533,7 +533,7 @@ export default function Plan() {
                     transition: "all 0.3s ease",
                     letterSpacing: 0.3,
                     background: isMax
-                      ? `linear-gradient(135deg, ${plan.color}, #5B21B6, ${plan.color})`
+                      ? `linear-gradient(135deg, , hsl(var(--primary)), )`
                       : isPro
                       ? plan.color
                       : "transparent",

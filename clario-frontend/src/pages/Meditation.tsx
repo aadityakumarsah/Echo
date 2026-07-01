@@ -22,7 +22,7 @@ import { ArrowLeft, Play, Square } from "lucide-react";
 const mpW = window as any;
 
 // ─── constants ────────────────────────────────────────────────────────────────
-const ACCENT        = "#7C3AED";       // violet
+const ACCENT = "hsl(var(--primary))";       // violet
 const GOOD_COLOR    = "#4ADE80";       // green – stable
 const BAD_COLOR     = "#F87171";       // red   – moved
 const MOVE_THRESHOLD = 0.016;          // normalised-coord distance per frame
@@ -143,7 +143,7 @@ export default function Meditation() {
       ctx.drawImage(results.image, 0, 0, W, H);
       // Fill background
       ctx.globalCompositeOperation = "destination-over";
-      ctx.fillStyle = "#060F1E";
+      ctx.fillStyle = "hsl(var(--background))";
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = "source-over";
     } else {
@@ -272,14 +272,14 @@ export default function Meditation() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 pt-10 pb-2 shrink-0">
         <button
           type="button"
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "hsl(var(--muted-foreground))" }}
         >
           <ArrowLeft className="w-4 h-4" />
           back
@@ -293,7 +293,7 @@ export default function Meditation() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="font-mono text-sm tabular-nums"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "hsl(var(--muted-foreground))" }}
             >
               {fmt(sessionSecs)}
             </motion.span>
@@ -310,7 +310,7 @@ export default function Meditation() {
           hold the pose
         </p>
         <h1
-          className="text-3xl font-bold text-white"
+          className="text-3xl font-bold text-foreground"
           style={{ letterSpacing: "-0.4px" }}
         >
           meditation
@@ -405,7 +405,7 @@ export default function Meditation() {
                 transition={{ duration: 0.2 }}
                 className="w-2.5 h-2.5 rounded-full shrink-0"
               />
-              <span className="text-sm font-semibold text-white">
+              <span className="text-sm font-semibold text-foreground">
                 {!isRunning ? "—" : stable ? "Still" : "Moving!"}
               </span>
             </div>
@@ -454,7 +454,7 @@ export default function Meditation() {
             <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>
               held for
             </p>
-            <span className="text-3xl font-bold text-white tabular-nums font-mono">
+            <span className="text-3xl font-bold text-foreground tabular-nums font-mono">
               {fmt(sessionSecs)}
             </span>
           </div>
@@ -493,7 +493,7 @@ export default function Meditation() {
           <button
             type="button"
             onClick={stopSession}
-            className="w-full py-4 rounded-2xl text-white font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-80"
+            className="w-full py-4 rounded-2xl text-foreground font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-80"
             style={{ backgroundColor: "rgba(248,113,113,0.18)", border: `1px solid ${BAD_COLOR}44`, color: BAD_COLOR }}
           >
             <Square className="w-4 h-4" />
@@ -504,7 +504,7 @@ export default function Meditation() {
             type="button"
             onClick={startSession}
             disabled={!loaded}
-            className="w-full py-4 rounded-2xl text-white font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-80 disabled:opacity-35 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-2xl text-foreground font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-80 disabled:opacity-35 disabled:cursor-not-allowed"
             style={{ backgroundColor: ACCENT }}
           >
             <Play className="w-4 h-4" />

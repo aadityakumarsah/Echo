@@ -30,12 +30,12 @@ const MOBILE_TABS = [
 ] as const;
 
 // ─── Mood sheet options ──────────────────────────────────────────────────────
-const MOOD_OPTIONS = [
+const MOOD_OPTIONS_DARK = [
   {
     label: "Breathe",
     path: "/breathe",
     Icon: Wind,
-    color: "#A78BFA",
+    color: "hsl(var(--primary))",
     bg: "rgba(167,139,250,0.1)",
     border: "rgba(167,139,250,0.25)",
     desc: "Guided breathing for your emotion",
@@ -56,6 +56,36 @@ const MOOD_OPTIONS = [
     color: "#60A5FA",
     bg: "rgba(96,165,250,0.1)",
     border: "rgba(96,165,250,0.25)",
+    desc: "Guided meditation sessions",
+  },
+];
+
+const MOOD_OPTIONS_LIGHT = [
+  {
+    label: "Breathe",
+    path: "/breathe",
+    Icon: Wind,
+    color: "#4A7B6F",
+    bg: "rgba(74,123,111,0.08)",
+    border: "rgba(74,123,111,0.2)",
+    desc: "Guided breathing for your emotion",
+  },
+  {
+    label: "Relief",
+    path: "/relief",
+    Icon: Smile,
+    color: "#6F9A6E",
+    bg: "rgba(111,154,110,0.08)",
+    border: "rgba(111,154,110,0.2)",
+    desc: "Air drawing & creative mindfulness",
+  },
+  {
+    label: "Meditation",
+    path: "/meditation",
+    Icon: Brain,
+    color: "#B79BBF",
+    bg: "rgba(183,155,191,0.1)",
+    border: "rgba(183,155,191,0.25)",
     desc: "Guided meditation sessions",
   },
 ];
@@ -92,6 +122,7 @@ const Navbar = () => {
 
   const isFullscreen = FULLSCREEN_PATHS.some((p) => location.pathname.startsWith(p));
   const isMoodActive = MOOD_PATHS.some((p) => location.pathname.startsWith(p));
+  const MOOD_OPTIONS = isDark ? MOOD_OPTIONS_DARK : MOOD_OPTIONS_LIGHT;
 
   const handleMoodOption = (path: string) => {
     setMoodOpen(false);
@@ -210,27 +241,27 @@ const Navbar = () => {
               className="md:hidden fixed left-0 right-0 z-50 rounded-t-3xl px-5 pt-5 pb-8"
               style={{
                 bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
-                background: "rgba(12,14,22,0.97)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: isDark ? "rgba(12,14,22,0.97)" : "rgba(250,246,241,0.98)",
+                border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(58,46,42,0.12)",
                 borderBottom: "none",
               }}
             >
               {/* Handle */}
-              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: "rgba(255,255,255,0.15)" }} />
+              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: isDark ? "rgba(255,255,255,0.15)" : "rgba(58,46,42,0.15)" }} />
 
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-white font-semibold text-base">Mood & Wellness</p>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                  <p className="font-semibold text-base" style={{ color: isDark ? "#fff" : "#3A2E2A" }}>Mood & Wellness</p>
+                  <p className="text-xs mt-0.5" style={{ color: isDark ? "rgba(255,255,255,0.38)" : "rgba(58,46,42,0.5)" }}>
                     Choose an activity
                   </p>
                 </div>
                 <button
                   onClick={() => setMoodOpen(false)}
                   className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  style={{ background: isDark ? "rgba(255,255,255,0.08)" : "rgba(58,46,42,0.07)" }}
                 >
-                  <X className="w-4 h-4" style={{ color: "rgba(255,255,255,0.5)" }} />
+                  <X className="w-4 h-4" style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(58,46,42,0.5)" }} />
                 </button>
               </div>
 
@@ -250,8 +281,8 @@ const Navbar = () => {
                       <Icon className="w-5 h-5" style={{ color }} />
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm">{label}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      <p className="font-semibold text-sm" style={{ color: isDark ? "#fff" : "#3A2E2A" }}>{label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "rgba(58,46,42,0.5)" }}>
                         {desc}
                       </p>
                     </div>
@@ -271,10 +302,10 @@ const Navbar = () => {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="md:hidden fixed bottom-0 left-0 right-0 z-40"
           style={{
-            backgroundColor: "rgba(10,14,24,0.92)",
+            backgroundColor: isDark ? "rgba(10,14,24,0.92)" : "rgba(250,246,241,0.94)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
-            borderTop: "1px solid rgba(255,255,255,0.07)",
+            borderTop: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(58,46,42,0.1)",
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
@@ -299,14 +330,14 @@ const Navbar = () => {
                     >
                       <Icon
                         className="w-5 h-5"
-                        style={{ color: active ? "#34D399" : "rgba(255,255,255,0.32)" }}
+                        style={{ color: active ? (isDark ? "#34D399" : "#6F9A6E") : (isDark ? "rgba(255,255,255,0.32)" : "rgba(58,46,42,0.35)") }}
                         strokeWidth={active ? 2.2 : 1.6}
                       />
                     </motion.div>
                     <span
                       className="text-[9px] font-medium"
                       style={{
-                        color: active ? "#34D399" : "rgba(255,255,255,0.28)",
+                        color: active ? (isDark ? "#34D399" : "#6F9A6E") : (isDark ? "rgba(255,255,255,0.28)" : "rgba(58,46,42,0.35)"),
                         letterSpacing: "0.03em",
                       }}
                     >
@@ -316,7 +347,7 @@ const Navbar = () => {
                       <motion.div
                         layoutId="tab-indicator"
                         className="absolute top-0 h-[2px] w-8 rounded-full"
-                        style={{ backgroundColor: "#34D399" }}
+                        style={{ backgroundColor: isDark ? "#34D399" : "#6F9A6E" }}
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                       />
                     )}
@@ -337,14 +368,14 @@ const Navbar = () => {
                   >
                     <Icon
                       className="w-5 h-5"
-                      style={{ color: active ? "#A78BFA" : "rgba(255,255,255,0.32)" }}
+                      style={{ color: active ? (isDark ? "#A78BFA" : "#4A7B6F") : (isDark ? "rgba(255,255,255,0.32)" : "rgba(58,46,42,0.35)") }}
                       strokeWidth={active ? 2.2 : 1.6}
                     />
                   </motion.div>
                   <span
                     className="text-[9px] font-medium truncate w-full text-center"
                     style={{
-                      color: active ? "#A78BFA" : "rgba(255,255,255,0.28)",
+                      color: active ? (isDark ? "#A78BFA" : "#4A7B6F") : (isDark ? "rgba(255,255,255,0.28)" : "rgba(58,46,42,0.35)"),
                       letterSpacing: "0.03em",
                     }}
                   >
@@ -354,7 +385,7 @@ const Navbar = () => {
                     <motion.div
                       layoutId="tab-indicator"
                       className="absolute top-0 h-[2px] w-8 rounded-full"
-                      style={{ backgroundColor: "#A78BFA" }}
+                      style={{ backgroundColor: isDark ? "#A78BFA" : "#4A7B6F" }}
                       transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
                   )}

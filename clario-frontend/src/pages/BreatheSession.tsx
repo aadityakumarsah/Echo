@@ -475,7 +475,7 @@ export default function BreatheSession() {
         className="absolute top-5 right-5 z-30 w-10 h-10 flex items-center justify-center rounded-full transition-opacity hover:opacity-60"
         style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
       >
-        <X className="w-5 h-5 text-white" />
+        <X className="w-5 h-5 text-foreground" />
       </button>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -494,7 +494,7 @@ export default function BreatheSession() {
         </p>
 
         {/* Emotion title */}
-        <h1 className="text-4xl font-bold text-white mb-1" style={{ letterSpacing: "-0.3px" }}>
+        <h1 className="text-4xl font-bold text-foreground mb-1" style={{ letterSpacing: "-0.3px" }}>
           {pattern.label}
         </h1>
         <p className="text-sm text-center" style={{ color: "rgba(160,180,220,0.6)" }}>
@@ -549,7 +549,7 @@ export default function BreatheSession() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-3xl font-semibold text-white mb-1"
+              className="text-3xl font-semibold text-foreground mb-1"
             >
               Done ✓
             </motion.p>
@@ -560,7 +560,7 @@ export default function BreatheSession() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.4 }}
-              className="text-3xl font-semibold text-white mb-1"
+              className="text-3xl font-semibold text-foreground mb-1"
             >
               {running ? currentPhase.text : "—"}
             </motion.p>
@@ -578,7 +578,7 @@ export default function BreatheSession() {
             animate={{ opacity: 1, y: 0 }}
             type="button"
             onClick={start}
-            className="mb-5 px-8 py-3 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+            className="mb-5 px-8 py-3 rounded-2xl text-foreground font-semibold text-sm transition-opacity hover:opacity-80"
             style={{ backgroundColor: pattern.color + "33", border: `1px solid ${pattern.color}55`, color: "rgba(255,255,255,0.9)" }}
           >
             start · {pattern.totalMinutes} min
@@ -590,7 +590,7 @@ export default function BreatheSession() {
             animate={{ opacity: 1, y: 0 }}
             type="button"
             onClick={() => navigate("/breathe")}
-            className="mb-5 px-8 py-3 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+            className="mb-5 px-8 py-3 rounded-2xl text-foreground font-semibold text-sm transition-opacity hover:opacity-80"
             style={{ backgroundColor: pattern.color + "33", border: `1px solid ${pattern.color}55` }}
           >
             back to breathe

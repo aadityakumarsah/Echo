@@ -250,11 +250,11 @@ function ReliefDrawingInner() {
       >
         <div className="relative w-16 h-16">
           <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
-            style={{ borderColor: "#A78BFA", borderTopColor: "transparent" }} />
+            style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
           <div className="absolute inset-2 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor: "#60A5FA", borderTopColor: "transparent", animationDirection: "reverse", animationDuration: "0.8s" }} />
         </div>
-        <p className="text-white font-semibold">Analyzing your drawing…</p>
+        <p className="text-foreground font-semibold">Analyzing your drawing…</p>
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Gemini is reading your strokes</p>
       </motion.div>
     </div>
@@ -279,7 +279,7 @@ function ReliefDrawingInner() {
           <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 flex flex-col items-center justify-center z-50">
             <div className="w-8 h-8 rounded-full border-2 animate-spin mb-3"
-              style={{ borderColor: "#A78BFA", borderTopColor: "transparent" }} />
+              style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>Starting camera…</p>
           </motion.div>
         )}
@@ -308,25 +308,25 @@ function ReliefDrawingInner() {
         <button onClick={() => navigate("/relief")}
           className="w-9 h-9 rounded-full flex items-center justify-center"
           style={{ background: "rgba(255,255,255,0.08)" }}>
-          <X className="w-4 h-4 text-white" />
+          <X className="w-4 h-4 text-foreground" />
         </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-white text-sm font-semibold tabular-nums">{timeStr}</span>
+          <span className="text-foreground text-sm font-semibold tabular-nums">{timeStr}</span>
           <div className="w-24 h-1 rounded-full mt-1" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, background: "#A78BFA" }} />
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, background: "hsl(var(--primary))" }} />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button onClick={undo} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <Undo2 className="w-4 h-4 text-white" />
+            <Undo2 className="w-4 h-4 text-foreground" />
           </button>
           <button onClick={clear} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <Trash2 className="w-4 h-4 text-white" />
+            <Trash2 className="w-4 h-4 text-foreground" />
           </button>
           <button onClick={download} className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <Download className="w-4 h-4 text-white" />
+            <Download className="w-4 h-4 text-foreground" />
           </button>
         </div>
       </div>
@@ -361,7 +361,7 @@ function ReliefDrawingInner() {
                 style={{
                   width: 32, height: 32,
                   background: brushSize === s ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.06)",
-                  border: `1px solid ${brushSize === s ? "#A78BFA55" : "rgba(255,255,255,0.08)"}`,
+                  border: `1px solid ${brushSize === s ? "hsl(var(--primary) / 0.33)" : "rgba(255,255,255,0.08)"}`,
                 }}>
                 <div className="rounded-full bg-white" style={{ width: s, height: s, opacity: brushSize === s ? 1 : 0.4 }} />
               </button>
@@ -372,7 +372,7 @@ function ReliefDrawingInner() {
           <motion.button
             onClick={submit}
             whileTap={{ scale: 0.92 }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-white text-sm font-semibold"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-foreground text-sm font-semibold"
             style={{ background: "rgba(167,139,250,0.25)", border: "1px solid rgba(167,139,250,0.5)" }}
           >
             <Send className="w-4 h-4" />

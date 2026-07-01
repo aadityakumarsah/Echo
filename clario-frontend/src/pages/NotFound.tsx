@@ -12,7 +12,7 @@ const NotFound = () => {
         404
       </p>
       <h1
-        className="text-5xl font-bold text-white mb-3"
+        className="text-5xl font-bold text-foreground mb-3"
         style={{ letterSpacing: "-0.5px" }}
       >
         page not found
@@ -23,7 +23,7 @@ const NotFound = () => {
       <button
         type="button"
         onClick={() => navigate("/dashboard")}
-        className="px-6 py-3 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+        className="px-6 py-3 rounded-2xl text-foreground font-semibold text-sm transition-opacity hover:opacity-80"
         style={{ backgroundColor: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
       >
         back to dashboard

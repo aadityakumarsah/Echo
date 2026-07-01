@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Mic } from "lucide-react";
 import { markStepDone } from "./DailyCheck";
 
-const ACCENT = "#A78BFA";
+const ACCENT = "hsl(var(--primary))";
 
 const stagger = { visible: { transition: { staggerChildren: 0.1 } } };
 const fadeUp = {
@@ -19,7 +19,7 @@ export default function DailyCheckNight() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
       {/* Top bar */}
       <div className="px-6 pt-10 pb-2">
         <button
@@ -69,7 +69,7 @@ export default function DailyCheckNight() {
           {/* Heading */}
           <motion.h1
             variants={fadeUp}
-            className="text-3xl font-bold text-white leading-snug"
+            className="text-3xl font-bold text-foreground leading-snug"
             style={{ letterSpacing: "-0.4px" }}
           >
             Release the day
@@ -100,7 +100,7 @@ export default function DailyCheckNight() {
             onClick={() => { markStepDone("night"); navigate("/dashboard"); }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full mt-2 py-4 rounded-2xl text-white font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-85"
+            className="w-full mt-2 py-4 rounded-2xl text-foreground font-semibold text-sm flex items-center justify-center gap-2.5 transition-opacity hover:opacity-85"
             style={{ backgroundColor: ACCENT }}
           >
             <Mic className="w-4 h-4" />

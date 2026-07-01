@@ -14,7 +14,7 @@ export default function TrialBanner({ daysLeft }: TrialBannerProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className="w-full flex items-center justify-center gap-3 px-4 py-2 text-sm"
-      style={{ background: "#1E1040", borderBottom: "1px solid #2D1B69" }}
+      style={{ background: "hsl(var(--card))", borderBottom: "1px solid hsl(var(--border))" }}
     >
       <span style={{ color: "#C4B5FD" }}>
         {daysLeft === 1
@@ -24,7 +24,7 @@ export default function TrialBanner({ daysLeft }: TrialBannerProps) {
       <button
         onClick={() => navigate("/paywall")}
         className="font-semibold px-3 py-0.5 rounded-full text-xs transition-colors duration-150"
-        style={{ background: "#7C3AED", color: "#fff" }}
+        style={{ background: "hsl(var(--primary))", color: "#fff" }}
       >
         Upgrade
       </button>

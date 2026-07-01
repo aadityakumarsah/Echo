@@ -28,7 +28,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
   const durationStr = `${mins}:${String(secs).padStart(2, "0")}`;
 
   const BARS = [
-    { label: "Stress Reduction", value: stressReduction, color: "#A78BFA", icon: TrendingDown },
+    { label: "Stress Reduction", value: stressReduction, color: "hsl(var(--primary))", icon: TrendingDown },
     { label: "Focus",            value: focusScore,      color: "#60A5FA", icon: Zap },
     { label: "Calm Level",       value: calmScore,       color: "#34D399", icon: Heart },
     { label: "Creativity",       value: creativityScore, color: "#F472B6", icon: Star },
@@ -70,7 +70,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
             <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>
               session complete
             </p>
-            <h1 className="text-2xl font-bold text-white">Stress Report</h1>
+            <h1 className="text-2xl font-bold text-foreground">Stress Report</h1>
             <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
               {activity === "drawing" ? "Air Drawing" : "Space Blocks"} · {durationStr}
               {score !== undefined && ` · ${score} pts`}
@@ -81,7 +81,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "rgba(255,255,255,0.08)" }}
           >
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4 text-foreground" />
           </button>
         </div>
 
@@ -93,7 +93,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
           className="rounded-2xl p-6 mb-4 text-center"
           style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)" }}
         >
-          <p className="text-6xl font-bold mb-1" style={{ color: "#A78BFA" }}>{stressReduction}%</p>
+          <p className="text-6xl font-bold mb-1" style={{ color: "hsl(var(--primary))" }}>{stressReduction}%</p>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>estimated stress reduction</p>
         </motion.div>
 
@@ -184,7 +184,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
                 className="text-sm leading-relaxed"
                 style={{ color: "rgba(255,255,255,0.6)" }}
               >
-                <span style={{ color: "#A78BFA" }}>·</span> {text}
+                <span style={{ color: "hsl(var(--primary))" }}>·</span> {text}
               </motion.p>
             ))}
           </div>
@@ -192,7 +192,7 @@ export default function ReliefReport({ activity, duration, score, onClose }: Pro
 
         <button
           onClick={onClose}
-          className="w-full py-3.5 rounded-2xl text-white font-semibold text-sm"
+          className="w-full py-3.5 rounded-2xl text-foreground font-semibold text-sm"
           style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}
         >
           Back to Relief

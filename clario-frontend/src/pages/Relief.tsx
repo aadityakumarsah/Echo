@@ -9,7 +9,7 @@ const CARDS = [
     subtitle: "Draw with your finger in the air",
     description: "Use your index finger as a brush. Point to draw, open palm to pause, pinch to erase.",
     icon: Paintbrush,
-    color: "#A78BFA",
+    color: "hsl(var(--primary))",
     bg: "rgba(167,139,250,0.08)",
     border: "rgba(167,139,250,0.25)",
     tag: "Camera · MediaPipe",
@@ -43,7 +43,7 @@ export default function Relief() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#0F0E0C" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--background))" }}>
       <div className="max-w-xl mx-auto px-5 pt-14 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 14 }}
@@ -53,16 +53,16 @@ export default function Relief() {
           <button
             onClick={() => navigate("/daily-check")}
             className="flex items-center gap-1.5 mb-5 text-sm transition-opacity hover:opacity-70"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "hsl(var(--muted-foreground))" }}
           >
             <ArrowLeft className="w-4 h-4" />
             Home
           </button>
-          <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "hsl(var(--muted-foreground))" }}>
             relief
           </p>
-          <h1 className="text-3xl font-bold text-white mb-1">Mindful Activities</h1>
-          <p className="text-sm mb-10" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <h1 className="text-3xl font-bold text-foreground mb-1">Mindful Activities</h1>
+          <p className="text-sm mb-10" style={{ color: "hsl(var(--muted-foreground))" }}>
             Calm your mind through creative play
           </p>
         </motion.div>
@@ -95,7 +95,7 @@ export default function Relief() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <h2 className="text-base font-semibold text-white">{card.title}</h2>
+                    <h2 className="text-base font-semibold text-foreground">{card.title}</h2>
                     <span
                       className="text-[10px] px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: card.color + "22", color: card.color }}
@@ -104,7 +104,7 @@ export default function Relief() {
                     </span>
                   </div>
                   <p className="text-xs mb-2" style={{ color: card.color + "cc" }}>{card.subtitle}</p>
-                  <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <p className="text-xs leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
                     {card.description}
                   </p>
                 </div>

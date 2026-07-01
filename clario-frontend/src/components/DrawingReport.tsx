@@ -25,14 +25,14 @@ const STRESS_LABEL = (v: number) => {
   if (v <= 4) return { label: "Elevated", color: "#FBBF24" };
   if (v <= 6) return { label: "Moderate", color: "#60A5FA" };
   if (v <= 8) return { label: "Calm", color: "#34D399" };
-  return { label: "Very Calm", color: "#A78BFA" };
+  return { label: "Very Calm", color: "hsl(var(--primary))" };
 };
 
 export default function DrawingReport({ data, onClose }: Props) {
   const stressInfo = STRESS_LABEL(data.stress_level);
 
   const BARS = [
-    { label: "Stress Reduction", value: data.stress_reduction, color: "#A78BFA", Icon: TrendingDown },
+    { label: "Stress Reduction", value: data.stress_reduction, color: "hsl(var(--primary))", Icon: TrendingDown },
     { label: "Focus",            value: data.focus_score,      color: "#60A5FA", Icon: Zap },
     { label: "Calm Level",       value: data.calm_score,       color: "#34D399", Icon: Heart },
     { label: "Creativity",       value: data.creativity_score, color: "#F472B6", Icon: Star },
@@ -71,7 +71,7 @@ export default function DrawingReport({ data, onClose }: Props) {
             <p className="text-xs uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>
               AI Drawing Analysis
             </p>
-            <h1 className="text-2xl font-bold text-white">Stress Report</h1>
+            <h1 className="text-2xl font-bold text-foreground">Stress Report</h1>
             <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
               Powered by Gemini Vision
             </p>
@@ -79,7 +79,7 @@ export default function DrawingReport({ data, onClose }: Props) {
           <button onClick={onClose}
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "rgba(255,255,255,0.08)" }}>
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4 text-foreground" />
           </button>
         </div>
 
@@ -114,7 +114,7 @@ export default function DrawingReport({ data, onClose }: Props) {
             </div>
           </div>
           <div>
-            <p className="text-lg font-bold text-white mb-0.5">{data.mental_state}</p>
+            <p className="text-lg font-bold text-foreground mb-0.5">{data.mental_state}</p>
             <p className="text-xs mb-1" style={{ color: stressInfo.color }}>{stressInfo.label}</p>
             <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>
               {data.drawing_analysis}
@@ -192,7 +192,7 @@ export default function DrawingReport({ data, onClose }: Props) {
           <div className="rounded-2xl p-5 mb-4"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center gap-2 mb-3">
-              <Brain className="w-3.5 h-3.5" style={{ color: "#A78BFA" }} />
+              <Brain className="w-3.5 h-3.5" style={{ color: "hsl(var(--primary))" }} />
               <p className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Gemini insights
               </p>
@@ -205,7 +205,7 @@ export default function DrawingReport({ data, onClose }: Props) {
                   transition={{ delay: 0.5 + i * 0.1 }}
                   className="text-sm leading-relaxed"
                   style={{ color: "rgba(255,255,255,0.6)" }}>
-                  <span style={{ color: "#A78BFA" }}>·</span> {text}
+                  <span style={{ color: "hsl(var(--primary))" }}>·</span> {text}
                 </motion.p>
               ))}
             </div>
@@ -226,7 +226,7 @@ export default function DrawingReport({ data, onClose }: Props) {
         )}
 
         <button onClick={onClose}
-          className="w-full py-3.5 rounded-2xl text-white font-semibold text-sm"
+          className="w-full py-3.5 rounded-2xl text-foreground font-semibold text-sm"
           style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)" }}>
           Back to Relief
         </button>

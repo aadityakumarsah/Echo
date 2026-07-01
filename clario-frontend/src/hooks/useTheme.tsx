@@ -14,7 +14,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem("clario-theme");
     if (stored === "dark" || stored === "light") return stored;
-    return "dark"; // default to dark
+    return "light"; // default to light
   });
 
   useEffect(() => {

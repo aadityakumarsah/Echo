@@ -76,7 +76,7 @@ function WaterGlass({ index, drunk, onClick }: { index: number; drunk: boolean; 
                 className="w-10 h-10 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: ACCENT }}
               >
-                <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                <Check className="w-5 h-5 text-foreground" strokeWidth={3} />
               </div>
             </motion.div>
           )}
@@ -103,7 +103,7 @@ export default function DailyCheckMorning() {
   const both = drunk.every(Boolean);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
       {/* Top bar */}
       <div className="flex items-center gap-3 px-6 pt-10 pb-2">
         <button
@@ -122,7 +122,7 @@ export default function DailyCheckMorning() {
         <p className="text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: ACCENT, opacity: 0.8 }}>
           01 · morning energy
         </p>
-        <h1 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.4px" }}>
+        <h1 className="text-3xl font-bold text-foreground" style={{ letterSpacing: "-0.4px" }}>
           Hydrate
         </h1>
         <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>
@@ -175,7 +175,7 @@ export default function DailyCheckMorning() {
               animate={{ opacity: 1, y: 0 }}
               type="button"
               onClick={() => { markStepDone("morning"); navigate("/daily-check"); }}
-              className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-opacity hover:opacity-80"
+              className="w-full py-4 rounded-2xl text-foreground font-semibold text-sm transition-opacity hover:opacity-80"
               style={{ backgroundColor: ACCENT }}
             >
               Done — back to daily check

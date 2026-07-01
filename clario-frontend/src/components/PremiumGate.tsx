@@ -68,7 +68,7 @@ export default function PremiumGate({ feature, icon, description, children }: Pr
           className="text-[10px] font-semibold tracking-[0.25em] uppercase px-3.5 py-1.5 rounded-full mb-5"
           style={{
             background: "rgba(139,92,246,0.12)",
-            color: "#A78BFA",
+            color: "hsl(var(--primary))",
             border: "1px solid rgba(139,92,246,0.3)",
           }}
         >
@@ -110,7 +110,7 @@ export default function PremiumGate({ feature, icon, description, children }: Pr
         >
           {/* Section header */}
           <div className="flex items-center gap-2 mb-1.5">
-            <span style={{ color: "#A78BFA" }}>✦</span>
+            <span style={{ color: "hsl(var(--primary))" }}>✦</span>
             <span className="font-semibold text-base" style={{ color: "#FFFFFF" }}>Upgrade your plan</span>
           </div>
           <p className="text-sm mb-4 text-left" style={{ color: "#8B8B70" }}>

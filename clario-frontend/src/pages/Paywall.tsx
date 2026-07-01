@@ -80,10 +80,10 @@ function AuthForm() {
   };
 
   const inputStyle: React.CSSProperties = {
-    background: "#0D1B2E",
-    border: "1.5px solid #1E293B",
+    background: "hsl(var(--card))",
+    border: "1.5px solid hsl(var(--border))",
     borderRadius: "12px",
-    color: "#F1F5F9",
+    color: "hsl(var(--foreground))",
     padding: "10px 14px",
     width: "100%",
     fontSize: "14px",
@@ -99,12 +99,12 @@ function AuthForm() {
     >
       <div
         className="rounded-2xl p-6"
-        style={{ background: "#0D1B2E", border: "1.5px solid #1E293B" }}
+        style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
       >
         {/* Toggle */}
         <div
           className="flex rounded-xl p-1 mb-6"
-          style={{ background: "#060F1E" }}
+          style={{ background: "hsl(var(--background))" }}
         >
           {(["signup", "signin"] as AuthMode[]).map((m) => (
             <button
@@ -112,8 +112,8 @@ function AuthForm() {
               onClick={() => { setMode(m); setError(null); setSuccess(null); }}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{
-                background: mode === m ? "#7C3AED" : "transparent",
-                color: mode === m ? "#fff" : "#64748B",
+                background: mode === m ? "hsl(var(--primary))" : "transparent",
+                color: mode === m ? "#fff" : "hsl(var(--muted-foreground))",
               }}
             >
               {m === "signup" ? "Create account" : "Sign in"}
@@ -161,7 +161,7 @@ function AuthForm() {
             type="submit"
             disabled={loading}
             className="w-full py-2.5 rounded-xl text-sm font-semibold mt-1 transition-opacity disabled:opacity-60"
-            style={{ background: "#7C3AED", color: "#fff" }}
+            style={{ background: "hsl(var(--primary))", color: "#fff" }}
           >
             {loading
               ? "Please wait…"
@@ -172,7 +172,7 @@ function AuthForm() {
         </form>
 
         {mode === "signup" && (
-          <p className="mt-4 text-xs text-center" style={{ color: "#475569" }}>
+          <p className="mt-4 text-xs text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
             3 days free, then choose a plan. No card required to start.
           </p>
         )}
@@ -220,46 +220,46 @@ function PlanCards() {
             key={plan.id}
             onClick={() => handleSelect(plan.id)}
             disabled={loadingPlan !== null}
-            className="relative flex flex-col items-center text-center rounded-2xl p-6 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-60"
+            className="relative flex flex-col items-center text-center rounded-2xl p-6 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
             style={{
               background: plan.highlight
-                ? "linear-gradient(135deg, #1E1040 0%, #0F172A 100%)"
-                : "#0D1B2E",
+                ? "hsl(var(--primary) / 0.08)"
+                : "hsl(var(--card))",
               border: plan.highlight
-                ? "1.5px solid #7C3AED"
-                : "1.5px solid #1E293B",
+                ? "1.5px solid hsl(var(--primary))"
+                : "1.5px solid hsl(var(--border))",
               boxShadow: plan.highlight
-                ? "0 0 24px 0 rgba(124,58,237,0.18)"
+                ? "0 0 24px 0 hsl(var(--primary) / 0.12)"
                 : "none",
             }}
           >
             {plan.badge && (
               <span
                 className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
-                style={{ background: "#7C3AED", color: "#fff" }}
+                style={{ background: "hsl(var(--primary))", color: "#fff" }}
               >
                 {plan.badge}
               </span>
             )}
-            <span className="text-base font-semibold mb-1" style={{ color: plan.highlight ? "#A78BFA" : "#94A3B8" }}>
+            <span className="text-base font-semibold mb-1" style={{ color: plan.highlight ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
               {plan.label}
             </span>
-            <span className="text-4xl font-bold mb-0.5" style={{ color: "#F1F5F9" }}>
+            <span className="text-4xl font-bold mb-0.5" style={{ color: "hsl(var(--foreground))" }}>
               {plan.price}
             </span>
-            <span className="text-xs mb-3" style={{ color: "#64748B" }}>
+            <span className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
               {plan.period}
             </span>
-            <span className="text-sm mb-5" style={{ color: "#94A3B8" }}>
+            <span className="text-sm mb-5" style={{ color: "hsl(var(--muted-foreground))" }}>
               {plan.description}
             </span>
             <span
               className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors duration-150"
               style={{
                 background: plan.highlight
-                  ? loadingPlan === plan.id ? "#5B21B6" : "#7C3AED"
-                  : loadingPlan === plan.id ? "#1E3A5F" : "#1E293B",
-                color: plan.highlight ? "#fff" : "#94A3B8",
+                  ? loadingPlan === plan.id ? "hsl(var(--primary) / 0.85)" : "hsl(var(--primary))"
+                  : "hsl(var(--muted))",
+                color: plan.highlight ? "#fff" : "hsl(var(--muted-foreground))",
               }}
             >
               {loadingPlan === plan.id ? (wakingUp ? "Waking server…" : "Please wait…") : "Get started"}
@@ -269,7 +269,7 @@ function PlanCards() {
       </div>
 
       {wakingUp && !error && (
-        <p className="text-xs text-center animate-pulse" style={{ color: "#A78BFA" }}>
+        <p className="text-xs text-center animate-pulse" style={{ color: "hsl(var(--primary))" }}>
           Server is starting up — this takes up to 30 seconds, please wait…
         </p>
       )}
@@ -280,13 +280,13 @@ function PlanCards() {
           <button
             onClick={() => setError(null)}
             className="text-xs underline"
-            style={{ color: "#64748B" }}
+            style={{ color: "hsl(var(--muted-foreground))" }}
           >
             Dismiss and try again
           </button>
         </div>
       )}
-      <p className="text-xs text-center" style={{ color: "#475569" }}>
+      <p className="text-xs text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
         Cancel anytime. Secure payment via Dodo Payments.
       </p>
     </motion.div>
@@ -308,7 +308,7 @@ export default function Paywall() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-12 gap-8"
-      style={{ background: "#060F1E" }}
+      style={{ background: "hsl(var(--background))" }}
     >
       {/* Logo */}
       <motion.div
@@ -317,7 +317,7 @@ export default function Paywall() {
         transition={{ duration: 0.5 }}
         className="text-center"
       >
-        <h1 className="text-4xl font-bold tracking-tight" style={{ color: "#A78BFA" }}>
+        <h1 className="text-4xl font-bold tracking-tight" style={{ color: "hsl(var(--primary))" }}>
           Clario
         </h1>
       </motion.div>
@@ -329,14 +329,14 @@ export default function Paywall() {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="text-center space-y-2"
       >
-        <h2 className="text-3xl font-semibold text-white">
+        <h2 className="text-3xl font-semibold" style={{ color: "hsl(var(--foreground))" }}>
           {showPlans
             ? stillInTrial
               ? "Upgrade your plan"
               : "Your free trial has ended"
             : "Feel better, starting today"}
         </h2>
-        <p className="text-base" style={{ color: "#94A3B8" }}>
+        <p className="text-base" style={{ color: "hsl(var(--muted-foreground))" }}>
           {showPlans
             ? stillInTrial
               ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left in your trial — upgrade anytime`
@@ -347,7 +347,7 @@ export default function Paywall() {
 
       <AnimatePresence mode="wait">
         {loading ? (
-          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         ) : showPlans ? (
           <>
             <PlanCards />
@@ -357,9 +357,9 @@ export default function Paywall() {
                   onClick={() => navigate("/daily-check")}
                   className="px-6 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    color: "#94A3B8",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "hsl(var(--muted))",
+                    color: "hsl(var(--muted-foreground))",
+                    border: "1px solid hsl(var(--border))",
                   }}
                 >
                   Not yet, continue my trial
@@ -368,7 +368,7 @@ export default function Paywall() {
               <button
                 onClick={signOut}
                 className="text-xs underline"
-                style={{ color: "#475569" }}
+                style={{ color: "hsl(var(--muted-foreground))" }}
               >
                 Sign out
               </button>

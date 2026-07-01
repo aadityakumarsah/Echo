@@ -92,7 +92,7 @@ export default function PaywallSuccess() {
   // ── Payment failed ─────────────────────────────────────────────────────────
   if (state === "failed") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "#060F1E" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "hsl(var(--background))" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -103,21 +103,21 @@ export default function PaywallSuccess() {
             className="mx-auto w-16 h-16 rounded-full flex items-center justify-center"
             style={{ background: "rgba(239,68,68,0.15)", border: "1.5px solid #EF4444" }}
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-white">Payment failed</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>Payment failed</h1>
 
-          <p className="text-sm leading-relaxed" style={{ color: "#94A3B8" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
             {getFailureMessage(errorCode ?? dodoStatus)}
           </p>
 
           <button
             onClick={() => navigate("/paywall")}
             className="w-full py-3 rounded-xl text-sm font-semibold"
-            style={{ background: "#7C3AED", color: "#fff" }}
+            style={{ background: "hsl(var(--primary))", color: "#fff" }}
           >
             Try again
           </button>
@@ -125,7 +125,7 @@ export default function PaywallSuccess() {
           <button
             onClick={() => navigate("/daily-check")}
             className="w-full py-2 text-xs"
-            style={{ color: "#64748B" }}
+            style={{ color: "hsl(var(--muted-foreground))" }}
           >
             Go back to app
           </button>
@@ -137,9 +137,9 @@ export default function PaywallSuccess() {
   // ── Syncing ────────────────────────────────────────────────────────────────
   if (state === "syncing") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#060F1E" }}>
-        <div className="w-7 h-7 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm" style={{ color: "#94A3B8" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "hsl(var(--background))" }}>
+        <div className="w-7 h-7 border-2 rounded-full animate-spin" style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
+        <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
           {attempt > 0 ? "Retrying…" : "Activating your subscription…"}
         </p>
       </div>
@@ -149,7 +149,7 @@ export default function PaywallSuccess() {
   // ── Sync error (backend unreachable) ───────────────────────────────────────
   if (state === "error") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "#060F1E" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "hsl(var(--background))" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -166,16 +166,16 @@ export default function PaywallSuccess() {
             </svg>
           </div>
 
-          <h1 className="text-2xl font-bold text-white">Payment received!</h1>
+          <h1 className="text-2xl font-bold text-foreground">Payment received!</h1>
 
-          <p className="text-sm leading-relaxed" style={{ color: "#94A3B8" }}>
+          <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
             Your payment went through — the server is still waking up. Tap retry and it will activate in seconds.
           </p>
 
           <button
             onClick={() => setAttempt(a => a + 1)}
             className="w-full py-3 rounded-xl text-sm font-semibold"
-            style={{ background: "#7C3AED", color: "#fff" }}
+            style={{ background: "hsl(var(--primary))", color: "#fff" }}
           >
             Retry activation
           </button>
@@ -183,7 +183,7 @@ export default function PaywallSuccess() {
           <button
             onClick={() => navigate("/daily-check")}
             className="w-full py-2 text-xs"
-            style={{ color: "#64748B" }}
+            style={{ color: "hsl(var(--muted-foreground))" }}
           >
             Skip — I'll check later in Settings
           </button>
@@ -194,7 +194,7 @@ export default function PaywallSuccess() {
 
   // ── Success ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "hsl(var(--background))" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -206,25 +206,25 @@ export default function PaywallSuccess() {
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           className="mx-auto w-16 h-16 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(124,58,237,0.18)", border: "1.5px solid #7C3AED" }}
+          style={{ background: "hsl(var(--primary) / 0.12)", border: "1.5px solid hsl(var(--primary))" }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </motion.div>
 
-        <h1 className="text-3xl font-bold text-white">You're all set!</h1>
+        <h1 className="text-3xl font-bold text-foreground">You're all set!</h1>
 
-        <p className="text-base leading-relaxed" style={{ color: "#94A3B8" }}>
+        <p className="text-base leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
           Welcome to{" "}
-          <span style={{ color: "#A78BFA" }} className="font-semibold">Clario Premium</span>
+          <span style={{ color: "hsl(var(--primary))" }} className="font-semibold">Clario Premium</span>
           . Your subscription is now active — enjoy full access to all your wellness tools.
         </p>
 
         <button
           onClick={() => navigate("/daily-check")}
           className="w-full py-3 rounded-xl text-sm font-semibold transition-colors duration-150"
-          style={{ background: "#7C3AED", color: "#fff" }}
+          style={{ background: "hsl(var(--primary))", color: "#fff" }}
         >
           Start your day
         </button>

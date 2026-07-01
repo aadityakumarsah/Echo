@@ -155,7 +155,7 @@ export default function DailyCheckRefill() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 pt-10 pb-2">
         <button
@@ -174,7 +174,7 @@ export default function DailyCheckRefill() {
         <p className="text-[10px] uppercase tracking-[0.3em] mb-1" style={{ color: ACCENT, opacity: 0.8 }}>
           02 · day refill
         </p>
-        <h1 className="text-3xl font-bold text-white" style={{ letterSpacing: "-0.4px" }}>
+        <h1 className="text-3xl font-bold text-foreground" style={{ letterSpacing: "-0.4px" }}>
           5 Squats
         </h1>
         <p className="mt-1.5 text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>
@@ -229,7 +229,7 @@ export default function DailyCheckRefill() {
                   >
                     ✓
                   </div>
-                  <p className="text-white text-2xl font-bold">Set complete!</p>
+                  <p className="text-foreground text-2xl font-bold">Set complete!</p>
                   <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
                     5 squats done — body refilled.
                   </p>
@@ -250,7 +250,7 @@ export default function DailyCheckRefill() {
                     <button
                       type="button"
                       onClick={() => { markStepDone("refill"); navigate("/daily-check"); }}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-80"
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-foreground transition-opacity hover:opacity-80"
                       style={{ backgroundColor: ACCENT }}
                     >
                       back to daily check

@@ -41,9 +41,9 @@ function AppRoutes() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "#060F1E" }}
+        style={{ backgroundColor: "hsl(var(--background))" }}
       >
-        <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: "hsl(var(--primary))", borderTopColor: "transparent" }} />
       </div>
     );
   }

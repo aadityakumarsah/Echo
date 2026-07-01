@@ -56,7 +56,7 @@ const STEPS = [
     subtitle: "Release the day",
     description: "Speak your whole day to your voice agent. Nothing held back.",
     icon: Moon,
-    color: "#A78BFA",    // soft violet
+    color: "hsl(var(--primary))",    // soft violet
     path: "/daily-check/night",
   },
 ];
@@ -83,7 +83,7 @@ export default function DailyCheck() {
   const completedCount = STEPS.filter(s => done[s.key]).length;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "hsl(var(--background))" }}>
       <Navbar />
 
       {/* ── Garden scene section ─────────────────────────────────────── */}
@@ -105,7 +105,7 @@ export default function DailyCheck() {
             today's ritual
           </p>
           <div className="flex items-end justify-between">
-            <h1 className="text-4xl font-bold text-white" style={{ letterSpacing: "-0.5px" }}>
+            <h1 className="text-4xl font-bold text-foreground" style={{ letterSpacing: "-0.5px" }}>
               daily check
             </h1>
             {/* Progress pill */}
@@ -212,7 +212,7 @@ export default function DailyCheck() {
                     className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: step.color }}
                   >
-                    <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                    <Check className="w-3.5 h-3.5 text-foreground" strokeWidth={3} />
                   </motion.div>
                 ) : (
                   <div

@@ -432,7 +432,7 @@ function ReliefBlocksInner() {
         </button>
 
         <div className="text-center">
-          <div className="text-white font-bold text-base">🧱 {blockCount}</div>
+          <div className="text-foreground font-bold text-base">🧱 {blockCount}</div>
           <div className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.38)" }}>
             {gestureLabel()}
           </div>

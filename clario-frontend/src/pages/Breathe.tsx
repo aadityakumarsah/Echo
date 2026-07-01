@@ -69,7 +69,7 @@ function EmotionCard({ emotion, height }: { emotion: Emotion; height: number }) 
 
       {/* Text */}
       <div className="absolute bottom-3 left-3 right-2">
-        <p className="text-white text-base font-bold tracking-tight mb-1.5" style={{ letterSpacing: "-0.2px" }}>
+        <p className="text-foreground text-base font-bold tracking-tight mb-1.5" style={{ letterSpacing: "-0.2px" }}>
           {emotion.label}
         </p>
         <span
@@ -94,16 +94,16 @@ export default function Breathe() {
   const rightCol = EMOTIONS.filter((_, i) => i % 2 === 1);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#060F1E" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "hsl(var(--background))" }}>
       <Navbar />
 
       <div className="pt-28 pb-16 px-4 max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6 px-1">
-          <h1 className="text-white text-3xl font-bold" style={{ letterSpacing: "-0.5px" }}>
+          <h1 className="text-foreground text-3xl font-bold" style={{ letterSpacing: "-0.5px" }}>
             breathe
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.42)", letterSpacing: "0.1px" }}>
+          <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))", letterSpacing: "0.1px" }}>
             what do you want to release today?
           </p>
         </div>
