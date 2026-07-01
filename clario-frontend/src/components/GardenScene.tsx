@@ -170,16 +170,6 @@ export default function GardenScene({ completed, dayCount = 1 }: GardenSceneProp
           pointerEvents: "none",
         }}
       />
-      {/* Gradient fade into page bg at bottom */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(to bottom, transparent 55%, rgba(232,223,200,0.8) 100%)",
-          zIndex: 30,
-          pointerEvents: "none",
-        }}
-      />
 
       {/* Tree — always visible, wind-swaying Lottie, left side */}
       <LottieEl
