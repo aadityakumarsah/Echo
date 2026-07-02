@@ -272,22 +272,10 @@ function PlanCards() {
     }
   };
 
-  // ── Nepal checkout (eSewa / Khalti) ────────────────────────────────────────
-  const handleNepalSelect = async (plan: NepalPlan) => {
-    setLoadingPlan(plan as Plan);
-    setError(null);
-    try {
-      const result = await initiateNepalPayment(plan, nepalGateway);
-      if (nepalGateway === "esewa" && result.fields) {
-        submitEsewaForm(result.action_url, result.fields);
-      } else {
-        window.location.href = result.action_url;
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
-      setError(msg);
-      setLoadingPlan(null);
-    }
+  // ── Nepal checkout (eSewa / Khalti) — coming soon ─────────────────────────
+  const handleNepalSelect = (_plan: NepalPlan) => {
+    const name = nepalGateway === "esewa" ? "eSewa" : "Khalti";
+    setError(`${name} payments are coming soon! We'll notify you when it's ready.`);
   };
 
   return (

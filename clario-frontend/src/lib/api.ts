@@ -206,3 +206,67 @@ export async function generateSessionReport(sessionId: string): Promise<SessionD
   if (!json.success) throw new Error(json.message ?? `Server error ${res.status} — check Render logs`);
   return json.data as SessionDetailData;
 }
+
+// ── Daily checks ──────────────────────────────────────────────────────────────
+
+export type DailyStep = "morning" | "refill" | "night";
+
+export interface DailyChecksState {
+  check_date: string;
+  morning: boolean;
+  refill: boolean;
+  night: boolean;
+  day_complete: boolean;
+  completed_at: string | null;
+  current_streak: number;
+  longest_streak: number;
+  last_check_date: string | null;
+}
+
+export interface DailyCheckDay {
+  check_date: string;
+  morning: boolean;
+  refill: boolean;
+  night: boolean;
+  day_complete: boolean;
+}
+
+export function localDateString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export async function markCheckStep(step: DailyStep): Promise<DailyChecksState> {
+  if (!BASE) throw new Error("Backend URL not configured");
+  const res = await fetch(`${BASE}/daily-checks/mark`, {
+    method: "POST",
+    headers: await headers(),
+    body: JSON.stringify({ step, check_date: localDateString() }),
+  });
+  const json = await safeJson(res);
+  if (!json.success) throw new Error(json.message ?? "Failed to mark step");
+  return json.data as DailyChecksState;
+}
+
+export async function getDailyChecksToday(): Promise<DailyChecksState> {
+  if (!BASE) throw new Error("Backend URL not configured");
+  const today = localDateString();
+  const res = await fetch(`${BASE}/daily-checks/today?check_date=${encodeURIComponent(today)}`, {
+    headers: await headers(),
+  });
+  const json = await safeJson(res);
+  if (!json.success) throw new Error(json.message ?? "Failed to load daily checks");
+  return json.data as DailyChecksState;
+}
+
+export async function getDailyChecksHistory(days = 7): Promise<DailyCheckDay[]> {
+  if (!BASE) throw new Error("Backend URL not configured");
+  const today = localDateString();
+  const res = await fetch(
+    `${BASE}/daily-checks/history?days=${days}&end_date=${encodeURIComponent(today)}`,
+    { headers: await headers() },
+  );
+  const json = await safeJson(res);
+  if (!json.success) throw new Error(json.message ?? "Failed to load history");
+  return json.data as DailyCheckDay[];
+}

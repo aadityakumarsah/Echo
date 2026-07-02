@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { markStepDone } from "./DailyCheck";
+import PremiumGate from "@/components/PremiumGate";
 
 const mpWindow = window as any;
 
@@ -22,7 +23,7 @@ function calculateAngle(a: Point, b: Point, c: Point) {
   return angle;
 }
 
-export default function DailyCheckRefill() {
+function DailyCheckRefillInner() {
   const navigate = useNavigate();
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -320,5 +321,17 @@ export default function DailyCheckRefill() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DailyCheckRefill() {
+  return (
+    <PremiumGate
+      feature="Day Refill"
+      icon="🏋️"
+      description="Track your squats with live pose detection. Move your body, reset your mind — premium only."
+    >
+      <DailyCheckRefillInner />
+    </PremiumGate>
   );
 }

@@ -17,6 +17,7 @@ import Webcam from "react-webcam";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Play, Square } from "lucide-react";
+import PremiumGate from "@/components/PremiumGate";
 
 // ─── MediaPipe from CDN window globals ────────────────────────────────────────
 const mpW = window as any;
@@ -95,7 +96,7 @@ function fmt(s: number) {
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
-export default function Meditation() {
+function MeditationInner() {
   const navigate   = useNavigate();
   const webcamRef  = useRef<Webcam>(null);
   const canvasRef  = useRef<HTMLCanvasElement>(null);
@@ -513,5 +514,17 @@ export default function Meditation() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Meditation() {
+  return (
+    <PremiumGate
+      feature="Meditation"
+      icon="🧘"
+      description="Lotus pose detection keeps you honest — the app watches your stillness so you don't have to. Premium only."
+    >
+      <MeditationInner />
+    </PremiumGate>
   );
 }

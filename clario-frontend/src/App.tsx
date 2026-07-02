@@ -29,6 +29,7 @@ import PaywallSuccess from "./pages/PaywallSuccess.tsx";
 import TrialBanner from "./components/TrialBanner.tsx";
 import Login from "./pages/Login.tsx";
 import Onboard from "./pages/Onboard.tsx";
+import Garden from "./pages/Garden.tsx";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="/breathe" element={<Breathe />} />
         <Route path="/breathe/:emotion" element={<BreatheSession />} />
         <Route path="/meditation" element={<Meditation />} />
+        <Route path="/garden" element={<Garden />} />
         <Route path="/daily-check" element={<DailyCheck />} />
         <Route path="/daily-check/morning" element={<DailyCheckMorning />} />
         <Route path="/daily-check/refill" element={<DailyCheckRefill />} />

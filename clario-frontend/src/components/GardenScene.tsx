@@ -6,9 +6,12 @@
 import { useEffect, useRef } from "react";
 import lottie, { AnimationItem } from "lottie-web";
 
+const STEP_KEYS = ["morning", "refill", "night"] as const;
+
 interface GardenSceneProps {
-  completed: number; // 0–3 (steps done today)
-  dayCount?: number; // consecutive streak days — drives milestone unlocks
+  completed?: number;        // 0–3, kept for backwards compat
+  completedKeys?: string[];  // ["morning","refill","night"] — takes precedence
+  dayCount?: number;         // consecutive streak days — drives milestone unlocks
 }
 
 const FLOWER_SLOTS = [
@@ -126,7 +129,9 @@ function Flower({ slot, delayMs }: { slot: typeof FLOWER_SLOTS[0]; delayMs: numb
   );
 }
 
-export default function GardenScene({ completed, dayCount = 1 }: GardenSceneProps) {
+export default function GardenScene({ completed = 0, completedKeys, dayCount = 1 }: GardenSceneProps) {
+  // completedKeys takes precedence; fall back to count-based slice
+  const resolvedKeys = completedKeys ?? STEP_KEYS.slice(0, completed).map(k => k);
   const hasTeapot  = dayCount >= 1;
   const hasFloral  = dayCount >= 4;
   const hasBee     = dayCount >= 7;
@@ -240,7 +245,7 @@ export default function GardenScene({ completed, dayCount = 1 }: GardenSceneProp
       )}
 
       {/* Flowers — one per completed daily step */}
-      {FLOWER_SLOTS.slice(0, completed).map((slot, idx) => (
+      {FLOWER_SLOTS.filter((_, idx) => resolvedKeys.includes(STEP_KEYS[idx])).map((slot, idx) => (
         <Flower key={idx} slot={slot} delayMs={slot.delayMs} />
       ))}
 
