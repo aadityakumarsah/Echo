@@ -3,10 +3,13 @@ import { motion } from "framer-motion";
 
 interface TrialBannerProps {
   daysLeft: number;
+  timeLabel?: string;
 }
 
-export default function TrialBanner({ daysLeft }: TrialBannerProps) {
+export default function TrialBanner({ daysLeft, timeLabel }: TrialBannerProps) {
   const navigate = useNavigate();
+
+  const label = timeLabel ?? (daysLeft === 1 ? "1 day" : `${daysLeft} days`);
 
   return (
     <motion.div
@@ -17,9 +20,7 @@ export default function TrialBanner({ daysLeft }: TrialBannerProps) {
       style={{ background: "hsl(var(--card))", borderBottom: "1px solid hsl(var(--border))" }}
     >
       <span style={{ color: "hsl(var(--primary))" }}>
-        {daysLeft === 1
-          ? "1 day left in your free trial"
-          : `${daysLeft} days left in your free trial`}
+        {label} left in your free trial
       </span>
       <button
         onClick={() => navigate("/paywall")}

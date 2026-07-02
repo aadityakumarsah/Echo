@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { createCheckoutSession } from "@/lib/subscription";
+import { initiateNepalPayment, submitEsewaForm, NPR_LABELS, type NepalPlan, type NepalGateway } from "@/lib/nepal_payments";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccess } from "@/hooks/useAccess";
@@ -238,17 +239,24 @@ function AuthForm() {
   );
 }
 
+const NEPAL_PLANS: { id: NepalPlan; label: string; nprLabel: string; description: string; highlight: boolean; badge?: string }[] = [
+  { id: "weekly",  label: "Weekly",  nprLabel: NPR_LABELS.weekly,  description: "Try it out week by week",   highlight: false },
+  { id: "monthly", label: "Monthly", nprLabel: NPR_LABELS.monthly, description: "The most popular choice",   highlight: true,  badge: "Most Popular" },
+  { id: "yearly",  label: "Yearly",  nprLabel: NPR_LABELS.yearly,  description: "Best value — save over 30%", highlight: false },
+];
+
 function PlanCards() {
+  const [isNepal, setIsNepal] = useState(false);
+  const [nepalGateway, setNepalGateway] = useState<NepalGateway>("esewa");
   const [loadingPlan, setLoadingPlan] = useState<Plan | null>(null);
   const [wakingUp, setWakingUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSelect = async (plan: Plan) => {
+  // ── Dodo/Stripe checkout ────────────────────────────────────────────────────
+  const handleDodoSelect = async (plan: Plan) => {
     setLoadingPlan(plan);
     setWakingUp(false);
     setError(null);
-
-    // Show "waking up server" message after 5s if still loading
     const wakeTimer = setTimeout(() => setWakingUp(true), 5000);
     try {
       const url = await createCheckoutSession(plan);
@@ -264,30 +272,105 @@ function PlanCards() {
     }
   };
 
+  // ── Nepal checkout (eSewa / Khalti) ────────────────────────────────────────
+  const handleNepalSelect = async (plan: NepalPlan) => {
+    setLoadingPlan(plan as Plan);
+    setError(null);
+    try {
+      const result = await initiateNepalPayment(plan, nepalGateway);
+      if (nepalGateway === "esewa" && result.fields) {
+        submitEsewaForm(result.action_url, result.fields);
+      } else {
+        window.location.href = result.action_url;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg);
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <motion.div
       key="plans"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-3xl flex flex-col items-center gap-6"
+      className="w-full max-w-3xl flex flex-col items-center gap-5"
     >
+      {/* ── Nepal toggle ──────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-2xl w-full max-w-sm"
+        style={{ background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))" }}
+      >
+        <span className="text-xl">🇳🇵</span>
+        <div className="flex-1">
+          <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
+            Paying from Nepal?
+          </p>
+          <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Use eSewa or Khalti in NPR
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setIsNepal(v => !v); setError(null); }}
+          className="relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none"
+          style={{ background: isNepal ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
+          aria-checked={isNepal}
+          role="switch"
+        >
+          <span
+            className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+            style={{ transform: isNepal ? "translateX(24px)" : "translateX(0)" }}
+          />
+        </button>
+      </div>
+
+      {/* ── Gateway picker (Nepal mode only) ─────────────────────────────── */}
+      <AnimatePresence>
+        {isNepal && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="w-full max-w-sm overflow-hidden"
+          >
+            <div
+              className="flex rounded-xl p-1"
+              style={{ background: "hsl(var(--muted))" }}
+            >
+              {(["esewa", "khalti"] as NepalGateway[]).map((gw) => (
+                <button
+                  key={gw}
+                  type="button"
+                  onClick={() => setNepalGateway(gw)}
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 flex items-center justify-center gap-1.5"
+                  style={{
+                    background: nepalGateway === gw ? "hsl(var(--background))" : "transparent",
+                    color: nepalGateway === gw ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+                    boxShadow: nepalGateway === gw ? "0 1px 4px rgba(58,46,42,0.08)" : "none",
+                  }}
+                >
+                  {gw === "esewa" ? "🟢 eSewa" : "🟣 Khalti"}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Plan cards ────────────────────────────────────────────────────── */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {PLANS.map((plan) => (
+        {(isNepal ? NEPAL_PLANS : PLANS).map((plan) => (
           <button
             key={plan.id}
-            onClick={() => handleSelect(plan.id)}
+            onClick={() => isNepal ? handleNepalSelect(plan.id as NepalPlan) : handleDodoSelect(plan.id as Plan)}
             disabled={loadingPlan !== null}
             className="relative flex flex-col items-center text-center rounded-2xl p-6 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
             style={{
-              background: plan.highlight
-                ? "hsl(var(--primary) / 0.08)"
-                : "hsl(var(--card))",
-              border: plan.highlight
-                ? "1.5px solid hsl(var(--primary))"
-                : "1.5px solid hsl(var(--border))",
-              boxShadow: plan.highlight
-                ? "0 0 24px 0 hsl(var(--primary) / 0.12)"
-                : "none",
+              background: plan.highlight ? "hsl(var(--primary) / 0.08)" : "hsl(var(--card))",
+              border: plan.highlight ? "1.5px solid hsl(var(--primary))" : "1.5px solid hsl(var(--border))",
+              boxShadow: plan.highlight ? "0 0 24px 0 hsl(var(--primary) / 0.12)" : "none",
             }}
           >
             {plan.badge && (
@@ -301,11 +384,19 @@ function PlanCards() {
             <span className="text-base font-semibold mb-1" style={{ color: plan.highlight ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))" }}>
               {plan.label}
             </span>
-            <span className="text-4xl font-bold mb-0.5" style={{ color: "hsl(var(--foreground))" }}>
-              {plan.price}
-            </span>
+            {isNepal ? (
+              <span className="text-2xl font-bold mb-0.5 leading-tight" style={{ color: "hsl(var(--foreground))" }}>
+                {"nprLabel" in plan ? plan.nprLabel.split(" / ")[0] : ""}
+              </span>
+            ) : (
+              <span className="text-4xl font-bold mb-0.5" style={{ color: "hsl(var(--foreground))" }}>
+                {"price" in plan ? plan.price : ""}
+              </span>
+            )}
             <span className="text-xs mb-3" style={{ color: "hsl(var(--muted-foreground))" }}>
-              {plan.period}
+              {"nprLabel" in plan && isNepal
+                ? plan.nprLabel.split(" / ")[1]
+                : "period" in plan ? plan.period : ""}
             </span>
             <span className="text-sm mb-5" style={{ color: "hsl(var(--muted-foreground))" }}>
               {plan.description}
@@ -316,10 +407,14 @@ function PlanCards() {
                 background: plan.highlight
                   ? loadingPlan === plan.id ? "hsl(var(--primary) / 0.85)" : "hsl(var(--primary))"
                   : "hsl(var(--muted))",
-                color: plan.highlight ? "#fff" : "hsl(var(--muted-foreground))",
+                color: plan.highlight ? "#fff" : "hsl(var(--foreground))",
               }}
             >
-              {loadingPlan === plan.id ? (wakingUp ? "Waking server…" : "Please wait…") : "Get started"}
+              {loadingPlan === plan.id
+                ? (wakingUp ? "Waking server…" : "Please wait…")
+                : isNepal
+                ? `Pay with ${nepalGateway === "esewa" ? "eSewa" : "Khalti"}`
+                : "Get started"}
             </span>
           </button>
         ))}
@@ -334,17 +429,17 @@ function PlanCards() {
       {error && (
         <div className="flex flex-col items-center gap-2">
           <p className="text-sm text-red-400 text-center max-w-sm">{error}</p>
-          <button
-            onClick={() => setError(null)}
-            className="text-xs underline"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
+          <button onClick={() => setError(null)} className="text-xs underline" style={{ color: "hsl(var(--muted-foreground))" }}>
             Dismiss and try again
           </button>
         </div>
       )}
+
       <p className="text-xs text-center" style={{ color: "hsl(var(--muted-foreground))" }}>
-        Cancel anytime. Secure payment via Dodo Payments.
+        Cancel anytime.{" "}
+        {isNepal
+          ? `Secure payment via ${nepalGateway === "esewa" ? "eSewa" : "Khalti"}.`
+          : "Secure payment via Dodo Payments."}
       </p>
     </motion.div>
   );

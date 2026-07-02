@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { syncSubscription, getSubscriptionStatus } from "@/lib/subscription";
+import { verifyNepalPayment, type NepalGateway, type NepalPlan } from "@/lib/nepal_payments";
 import { clearSubCache, writeCache } from "@/hooks/useAccess";
 
 type State = "syncing" | "done" | "failed" | "error";
@@ -33,24 +34,53 @@ export default function PaywallSuccess() {
   const dodoStatus  = searchParams.get("status");   // "active" | "failed" | "pending"
   const errorCode   = searchParams.get("error") ?? searchParams.get("error_code");
 
-  // Detect payment failure immediately — don't try to activate
+  // Nepal gateway params (appended by our backend success_url)
+  const nepalGateway = searchParams.get("gateway") as NepalGateway | null;
+  const nepalPlan    = searchParams.get("plan") as NepalPlan | null;
+  const nepalUuid    = searchParams.get("uuid");
+  // eSewa sends ?data=<base64> after redirect; Khalti sends ?pidx=xxx
+  const esewaData    = searchParams.get("data");
+  const khaltiPidx   = searchParams.get("pidx");
+
+  const isNepalPayment = !!nepalGateway;
+
+  // Detect Dodo failure immediately
   useEffect(() => {
-    if (dodoStatus === "failed" || dodoStatus === "cancelled" || dodoStatus === "canceled") {
+    if (!isNepalPayment && (dodoStatus === "failed" || dodoStatus === "cancelled" || dodoStatus === "canceled")) {
       setState("failed");
     }
-  }, [dodoStatus]);
+  }, [dodoStatus, isNepalPayment]);
 
   const doSync = useCallback(async () => {
-    // Don't sync on failure
+    setState("syncing");
+
+    // ── Nepal gateway verification ─────────────────────────────────────────
+    if (isNepalPayment && nepalGateway && nepalPlan && nepalUuid) {
+      try {
+        await verifyNepalPayment({
+          gateway: nepalGateway,
+          plan: nepalPlan,
+          transaction_uuid: nepalUuid,
+          esewa_data: esewaData ?? undefined,
+          khalti_pidx: khaltiPidx ?? undefined,
+        });
+        clearSubCache();
+        writeCache({ active: true, plan: nepalPlan, expires_at: null });
+        setState("done");
+      } catch (err) {
+        console.error("Nepal payment verification failed:", err);
+        setState("error");
+      }
+      return;
+    }
+
+    // ── Dodo/Stripe path ───────────────────────────────────────────────────
     if (dodoStatus === "failed" || dodoStatus === "cancelled" || dodoStatus === "canceled") {
       setState("failed");
       return;
     }
 
-    setState("syncing");
-
-    // Dodo redirect with status=active is trusted proof of payment.
-    // Activate locally right away, sync DB in background.
+    // Dodo redirect with status=active is trusted — activate locally, sync DB in background.
     if (dodoStatus === "active") {
       clearSubCache();
       writeCache({ active: true, plan: null, expires_at: null });
@@ -78,7 +108,7 @@ export default function PaywallSuccess() {
       console.error("Sync failed:", err);
       setState("error");
     }
-  }, [sessionId, dodoStatus, attempt]);
+  }, [sessionId, dodoStatus, isNepalPayment, nepalGateway, nepalPlan, nepalUuid, esewaData, khaltiPidx, attempt]);
 
   // Auto-retry once after 8s if backend sync failed (server cold start)
   useEffect(() => {

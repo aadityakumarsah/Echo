@@ -36,7 +36,7 @@ const UNGUARDED_PATHS = ["/paywall", "/paywall/success", "/login", "/onboard"];
 
 function AppRoutes() {
   const location = useLocation();
-  const { hasAccess, isPremium, trialDaysLeft, loading } = useAccess();
+  const { hasAccess, isPremium, trialDaysLeft, trialTimeLabel, loading } = useAccess();
   const { user, loading: authLoading } = useAuth();
 
   const isUnguarded = UNGUARDED_PATHS.some((p) => location.pathname.startsWith(p));
@@ -63,11 +63,11 @@ function AppRoutes() {
   }
 
   const showBanner =
-    !loading && hasAccess && !isPremium && trialDaysLeft <= 2 && trialDaysLeft > 0 && !isUnguarded;
+    !loading && hasAccess && !isPremium && trialDaysLeft > 0 && !isUnguarded;
 
   return (
     <>
-      {showBanner && <TrialBanner daysLeft={trialDaysLeft} />}
+      {showBanner && <TrialBanner daysLeft={trialDaysLeft} timeLabel={trialTimeLabel} />}
       <Routes>
         <Route path="/" element={<DailyCheck />} />
         <Route path="/index" element={<Index />} />

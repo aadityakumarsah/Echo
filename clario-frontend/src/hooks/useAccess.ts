@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { isTrialActive, getTrialDaysLeft } from "@/lib/trial";
+import { isTrialActive, getTrialDaysLeft, getTrialTimeLabel } from "@/lib/trial";
 import { getSubscriptionStatus, SubscriptionStatus } from "@/lib/subscription";
 
 // ─── Module-level cache ───────────────────────────────────────────────────────
@@ -50,6 +50,7 @@ export interface AccessState {
   hasAccess: boolean;
   isPremium: boolean;
   trialDaysLeft: number;
+  trialTimeLabel: string;
   plan: string | null;
   expiresAt: string | null;
   loading: boolean;
@@ -65,9 +66,10 @@ export function useAccess(): AccessState {
   // If we have a valid cache hit: no loading state needed
   const [subLoading, setSubLoading] = useState<boolean>(!cached);
 
-  const createdAt     = user?.created_at ?? null;
-  const trialActive   = isTrialActive(createdAt);
-  const trialDaysLeft = getTrialDaysLeft(createdAt);
+  const createdAt      = user?.created_at ?? null;
+  const trialActive    = isTrialActive(createdAt);
+  const trialDaysLeft  = getTrialDaysLeft(createdAt);
+  const trialTimeLabel = getTrialTimeLabel(createdAt);
 
   useEffect(() => {
     if (authLoading) return;
@@ -82,11 +84,12 @@ export function useAccess(): AccessState {
   const isPremium = sub.active;
 
   return {
-    hasAccess:    trialActive || isPremium,
+    hasAccess:     trialActive || isPremium,
     isPremium,
     trialDaysLeft,
-    plan:         sub.plan,
-    expiresAt:    sub.expires_at,
-    loading:      authLoading || subLoading,
+    trialTimeLabel,
+    plan:          sub.plan,
+    expiresAt:     sub.expires_at,
+    loading:       authLoading || subLoading,
   };
 }
