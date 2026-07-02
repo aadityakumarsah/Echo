@@ -150,10 +150,10 @@ export default function DailyCheck() {
     setDone(loadDone());
     buildLocalWeek();
     syncFromApi();
-    const iv = setInterval(syncFromApi, 5000);
+    // Refresh on tab focus only — no polling interval to avoid spamming a temporarily-unavailable backend
     const onFocus = () => { setDone(loadDone()); syncFromApi(); };
     window.addEventListener("focus", onFocus);
-    return () => { clearInterval(iv); window.removeEventListener("focus", onFocus); };
+    return () => { window.removeEventListener("focus", onFocus); };
   }, []);
 
   const completedCount = STEPS.filter(s => done[s.key]).length;
